@@ -1,5 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { motion, useMotionValue, useTransform } from "framer-motion";
+import {
+  motion,
+  useMotionValue,
+  useTransform,
+  useAnimation,
+} from "framer-motion";
 import useInspections from "@/hooks/useInspections"; // Import our custom hook
 
 const InspectionSwipeCards = ({ onComplete }) => {
@@ -53,6 +58,17 @@ const InspectionSwipeCards = ({ onComplete }) => {
     setInspectionResults((prev) => [...prev, result]);
   };
 
+  // Add quick buttons to pass/fail without swiping
+  const handleQuickAction = (action, item) => {
+    if (action === "pass") {
+      handlePass(item);
+      setInspectionItems((prev) => prev.filter((v) => v.id !== item.id));
+    } else if (action === "fail") {
+      handleFail(item);
+      // The modal will handle removing the item
+    }
+  };
+
   // Submit fail reason from modal
   const submitFailReason = () => {
     if (!failReason.trim()) {
@@ -70,6 +86,9 @@ const InspectionSwipeCards = ({ onComplete }) => {
     setInspectionResults((prev) => [...prev, result]);
     setFailReason("");
     setShowModal(false);
+
+    // Remove the item from the list after submitting the fail reason
+    setInspectionItems((prev) => prev.filter((v) => v.id !== currentItem.id));
   };
 
   // Check if all items have been inspected
@@ -98,6 +117,7 @@ const InspectionSwipeCards = ({ onComplete }) => {
               setItems={setInspectionItems}
               onFail={() => handleFail(item)}
               onPass={() => handlePass(item)}
+              onQuickAction={(action) => handleQuickAction(action, item)}
               {...item}
             />
           ))
@@ -159,11 +179,43 @@ const InspectionSwipeCards = ({ onComplete }) => {
         </button>
       )}
 
-      {/* Instruction text */}
+      {/* Mobile-friendly instruction text */}
       {inspectionItems.length > 0 && (
-        <div className="mt-4 text-center text-gray-600 text-sm">
-          <p>Swipe RIGHT if the item PASSES inspection</p>
-          <p>Swipe LEFT if the item FAILS inspection</p>
+        <div className="mt-4 text-center text-gray-700 text-base">
+          <div className="flex items-center justify-center mb-1">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-5 w-5 mr-1 text-green-600"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M14 5l7 7m0 0l-7 7m7-7H3"
+              />
+            </svg>
+            <p>Swipe RIGHT or tap PASS for good items</p>
+          </div>
+          <div className="flex items-center justify-center">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-5 w-5 mr-1 text-red-600"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M10 19l-7-7m0 0l7-7m-7 7h18"
+              />
+            </svg>
+            <p>Swipe LEFT or tap FAIL for issues</p>
+          </div>
         </div>
       )}
 
@@ -212,8 +264,10 @@ const InspectionCard = ({
   setItems,
   onFail,
   onPass,
+  onQuickAction,
 }) => {
   const x = useMotionValue(0);
+  const controls = useAnimation();
   const rotateRaw = useTransform(x, [-150, 150], [-18, 18]);
   const opacity = useTransform(x, [-150, 0, 150], [0, 1, 0]);
   const background = useTransform(
@@ -236,15 +290,56 @@ const InspectionCard = ({
     return `${rotateRaw.get() + offset}deg`;
   });
 
-  const handleDragEnd = () => {
-    if (x.get() < -100) {
+  // Optimized drag handling specifically for mobile
+  const handleDragEnd = (_, info) => {
+    // Use velocity-based detection for more natural mobile swipes
+    // Lower threshold to 50px but use velocity to determine intent
+    const swipeVelocity = Math.abs(info.velocity.x);
+
+    if (x.get() < -50 || (x.get() < 0 && swipeVelocity > 300)) {
       // Swiped Left - Fail
-      setItems((pv) => pv.filter((v) => v.id !== id));
+      animateCardExit("left");
       onFail && onFail();
-    } else if (x.get() > 100) {
+    } else if (x.get() > 50 || (x.get() > 0 && swipeVelocity > 300)) {
       // Swiped Right - Pass
-      setItems((pv) => pv.filter((v) => v.id !== id));
+      animateCardExit("right");
       onPass && onPass();
+    } else {
+      // Return to center if not swiped far enough
+      controls.start({
+        x: 0,
+        transition: { type: "spring", stiffness: 400, damping: 30 },
+      });
+    }
+  };
+
+  // Add optimized animation for card exit on mobile
+  const animateCardExit = (direction) => {
+    const xTarget = direction === "left" ? -500 : 500;
+
+    controls
+      .start({
+        x: xTarget,
+        opacity: 0,
+        transition: {
+          duration: 0.15, // Faster animation for mobile
+          ease: "easeOut",
+        },
+      })
+      .then(() => {
+        // Small timeout to ensure animation completes smoothly on mobile
+        setTimeout(() => {
+          setItems((pv) => pv.filter((v) => v.id !== id));
+        }, 50);
+      });
+  };
+
+  // Helper for keyboard/accessibility support
+  const handleKeyDown = (e) => {
+    if (e.key === "ArrowLeft") {
+      onQuickAction("fail");
+    } else if (e.key === "ArrowRight") {
+      onQuickAction("pass");
     }
   };
 
@@ -262,7 +357,8 @@ const InspectionCard = ({
           ? "0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)"
           : undefined,
       }}
-      animate={{
+      animate={controls}
+      initial={{
         scale: isFront ? 1 : 0.98,
       }}
       drag={isFront ? "x" : false}
@@ -270,7 +366,16 @@ const InspectionCard = ({
         left: 0,
         right: 0,
       }}
+      dragElastic={1} // Maximum elasticity for mobile swipes
+      dragTransition={{
+        power: 0.2, // Lower power for smoother mobile interaction
+        timeConstant: 200, // Shorter time constant for quicker response
+        modifyTarget: (target) => (Math.abs(target) < 20 ? 0 : target), // Snap to center if swipe is very small
+      }}
       onDragEnd={handleDragEnd}
+      whileTap={{ cursor: "grabbing" }}
+      tabIndex={isFront ? 0 : -1}
+      onKeyDown={isFront ? handleKeyDown : undefined}
     >
       {/* Card Content */}
       <div className="flex flex-col items-center justify-center h-full p-6 text-center">
@@ -321,6 +426,56 @@ const InspectionCard = ({
             </svg>
           </motion.div>
         </div>
+
+        {/* Mobile-optimized action buttons - larger touch targets */}
+        {isFront && (
+          <div className="absolute bottom-2 inset-x-0 flex justify-center space-x-6 px-4">
+            <button
+              onClick={() => onQuickAction("fail")}
+              className="flex items-center justify-center px-6 py-3 bg-red-100 text-red-600 rounded-full hover:bg-red-200 transition-colors shadow-md active:shadow-sm active:translate-y-0.5"
+              aria-label="Fail inspection item"
+              style={{ touchAction: "manipulation" }}
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-6 w-6 mr-1"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+              FAIL
+            </button>
+            <button
+              onClick={() => onQuickAction("pass")}
+              className="flex items-center justify-center px-6 py-3 bg-green-100 text-green-600 rounded-full hover:bg-green-200 transition-colors shadow-md active:shadow-sm active:translate-y-0.5"
+              aria-label="Pass inspection item"
+              style={{ touchAction: "manipulation" }}
+            >
+              PASS
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-6 w-6 ml-1"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M5 13l4 4L19 7"
+                />
+              </svg>
+            </button>
+          </div>
+        )}
       </div>
     </motion.div>
   );
