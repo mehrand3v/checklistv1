@@ -1,5 +1,5 @@
-// src/router/appRouter.jsx
 
+// src/router/appRouter.jsx
 
 import { createBrowserRouter } from "react-router-dom";
 import routes from "./routes";

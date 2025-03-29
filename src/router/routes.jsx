@@ -3,8 +3,8 @@ import React from "react";
 import { Navigate, Outlet } from "react-router-dom";
 import NotFound from "@/pages/NotFound";
 import ErrorPage from "@/pages/ErrorPage";
-import SwipeChecklist from "@/components/SwipeChecklist";
 import InspectionDashboard from "@/components/InspectionDashboard";
+import InspectionSwipeCards from "@/components/InspectionSwipeCards";
 import {
   Clipboard,
   BarChart,
@@ -231,7 +231,15 @@ const routes = [
       },
       {
         path: "inspection/new",
-        element: <SwipeChecklist />,
+        element: (
+          <InspectionSwipeCards
+            onComplete={() => (window.location.href = "/")}
+          />
+        ),
+      },
+      {
+        path: "inspection/:inspectionId",
+        element: <InspectionDashboard view="details" />,
       },
       {
         path: "dashboard",
