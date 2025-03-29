@@ -41,7 +41,8 @@ const InspectionSwipeCards = ({ onComplete }) => {
 
   // Initialize inspection data
   useEffect(() => {
-    setInspectionItems([...inspectionData]);
+    const sortedItems = [...inspectionData].sort((a, b) => a.id - b.id);
+    setInspectionItems(sortedItems);
   }, []);
 
   // Calculate stats for display
@@ -74,44 +75,46 @@ const InspectionSwipeCards = ({ onComplete }) => {
       toast.success("Inspection complete! 🎉");
     }
   }, [stats.completed, stats.total]);
-
+const handleUpdateResults = (updatedResults) => {
+  setInspectionResults(updatedResults);
+};
   // Submit all inspection results to Firebase
- const handleSubmitInspection = async () => {
-   if (isSubmitting) return;
+const handleSubmitInspection = async () => {
+  if (isSubmitting) return;
 
-   setIsSubmitting(true);
-   try {
-     // Add inspector name to the inspection data
-     const submissionData = {
-       results: inspectionResults,
-       inspectorName: inspectorName,
-       timestamp: new Date().toISOString(),
-     };
+  setIsSubmitting(true);
+  try {
+    // Add inspector name to the inspection data
+    const submissionData = {
+      results: inspectionResults,
+      inspectorName: inspectorName,
+      timestamp: new Date().toISOString(),
+    };
 
-     await submitInspection(submissionData);
-     toast.success("Inspection submitted successfully! 👍");
+    await submitInspection(submissionData);
+    toast.success("Inspection submitted successfully! 👍");
 
-     // Reset the form for a new inspection
-     setInspectionItems([...inspectionData]);
-     setInspectionResults([]);
-     setIsCompleted(false);
-     setActiveIndex(0);
-     setViewMode("inspection");
+    // Reset and redirect
+    setInspectionItems([...inspectionData]);
+    setInspectionResults([]);
+    setIsCompleted(false);
+    setActiveIndex(0);
+    setViewMode("inspection");
 
-     // Navigate back to home page after submission
-     navigate("/");
+    // Navigate back to home page after submission
+    navigate("/");
 
-     // Notify parent component that inspection is complete
-     if (onComplete && typeof onComplete === "function") {
-       onComplete();
-     }
-   } catch (error) {
-     console.error("Error submitting inspection:", error);
-     toast.error("Error submitting inspection. Please try again.");
-   } finally {
-     setIsSubmitting(false);
-   }
- };
+    // Notify parent component that inspection is complete
+    if (onComplete && typeof onComplete === "function") {
+      onComplete();
+    }
+  } catch (error) {
+    console.error("Error submitting inspection:", error);
+    toast.error("Error submitting inspection. Please try again.");
+  } finally {
+    setIsSubmitting(false);
+  }
+};
 
   // Start a new inspection (reset everything)
   const handleStartNewInspection = () => {
@@ -168,13 +171,11 @@ const InspectionSwipeCards = ({ onComplete }) => {
     (itemId) => {
       setInspectionItems((prev) => {
         const newItems = prev.filter((v) => v.id !== itemId);
-        if (newItems.length > 0) {
-          setActiveIndex(Math.min(activeIndex, newItems.length - 1));
-        }
+
         return newItems;
       });
     },
-    [activeIndex]
+    []
   );
 
   // Submit fail reason from modal
@@ -230,31 +231,22 @@ const InspectionSwipeCards = ({ onComplete }) => {
   };
 
   return (
-    <div className="flex flex-col items-center w-full max-w-md mx-auto relative">
-      {/* Admin login button */}
-      <div className="absolute top-3 right-3 z-50">
-        <button
-          onClick={() => navigate("/login")}
-          className="w-10 h-10 flex items-center justify-center rounded-full bg-white bg-opacity-70 hover:bg-opacity-90 text-gray-600 shadow-sm border border-gray-200"
-          aria-label="Admin Login"
-        >
-          <User className="h-5 w-5" />
-        </button>
+    <div className="flex flex-col items-center w-full max-w-md mx-auto relative min-h-[100dvh] bg-gradient-to-b from-gray-900 via-indigo-950 to-purple-950 py-2 px-4">
+      {/* Header Component - reduced margin */}
+      <div className="w-full mt-1 mb-1">
+        <InspectionHeader
+          stats={stats}
+          viewMode={viewMode}
+          setView={setView}
+          hasResults={inspectionResults.length > 0}
+          onStartNew={handleStartNewInspection}
+          isCompleted={isCompleted || inspectionItems.length === 0}
+        />
       </div>
-
-      {/* Header Component */}
-      <InspectionHeader
-        stats={stats}
-        viewMode={viewMode}
-        setView={setView}
-        hasResults={inspectionResults.length > 0}
-        onStartNew={handleStartNewInspection}
-        isCompleted={isCompleted || inspectionItems.length === 0}
-      />
 
       {/* Main Content Area - Positioned further up the page */}
       <motion.div
-        className="relative h-[calc(100dvh-140px)] w-full mb-2 mt-0 bg-gray-50 rounded-xl shadow-md overflow-hidden flex items-center justify-center border border-gray-100"
+        className="relative h-[calc(100dvh-150px)] w-full my-1 overflow-hidden flex items-center justify-center"
         variants={containerVariants}
         initial="hidden"
         animate="visible"
@@ -273,8 +265,8 @@ const InspectionSwipeCards = ({ onComplete }) => {
               {inspectionItems.length > 0 ? (
                 !processingCard && (
                   <InspectionCard
-                    key={inspectionItems[inspectionItems.length - 1].id}
-                    item={inspectionItems[inspectionItems.length - 1]}
+                    key={inspectionItems[0].id}
+                    item={inspectionItems[0]}
                     onFail={handleFail}
                     onPass={handlePass}
                     onQuickAction={handleQuickAction}
@@ -302,6 +294,7 @@ const InspectionSwipeCards = ({ onComplete }) => {
                 results={inspectionResults}
                 onSelectResult={(id) => setView("detail", id)}
                 onBack={() => setView("inspection")}
+                onUpdateResults={handleUpdateResults}
               />
             </motion.div>
           )}
@@ -329,11 +322,11 @@ const InspectionSwipeCards = ({ onComplete }) => {
 
       {/* Swipe instructions - only show during active inspection */}
       {viewMode === "inspection" && inspectionItems.length > 0 && (
-        <div className="w-full flex justify-between text-xs text-gray-600 px-2 py-1 bg-white rounded-lg shadow-sm border border-gray-100 mb-2">
-          <div className="flex items-center text-red-600 font-medium">
+        <div className="w-full flex justify-between text-xs text-gray-400 px-2 py-1 bg-gray-800/50 rounded-lg border border-gray-700/50 mb-1">
+          <div className="flex items-center text-red-400 font-medium">
             <span>← Swipe LEFT to FAIL</span>
           </div>
-          <div className="flex items-center text-green-600 font-medium">
+          <div className="flex items-center text-green-400 font-medium">
             <span>Swipe RIGHT to PASS →</span>
           </div>
         </div>

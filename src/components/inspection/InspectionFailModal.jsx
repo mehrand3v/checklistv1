@@ -12,68 +12,68 @@ const InspectionFailModal = ({
   onChangeReason,
 }) => {
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm flex items-center justify-center z-50 p-3">
+   
+
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-3">
       <motion.div
         initial={{ opacity: 0, scale: 0.9, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.9, y: 20 }}
-        className="bg-white p-4 rounded-xl w-full max-w-md shadow-xl border border-red-100"
+        className="bg-gray-900/90 p-5 rounded-xl w-full max-w-md shadow-xl border border-red-500/30"
       >
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center justify-between mb-4">
           <div className="flex items-center">
-            <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center mr-2">
-              <AlertTriangle className="h-5 w-5 text-red-600" />
+            <div className="w-10 h-10 rounded-full bg-red-900/50 border border-red-500/30 flex items-center justify-center mr-3">
+              <AlertTriangle className="h-5 w-5 text-red-400" />
             </div>
-            <h3 className="text-lg font-bold text-gray-800">Failed Item</h3>
+            <h3 className="text-xl font-bold text-red-300">Failed Item</h3>
           </div>
           <button
             onClick={onCancel}
-            className="p-1 hover:bg-gray-100 rounded-full transition-colors"
+            className="p-1 hover:bg-gray-800 rounded-full transition-colors text-gray-400 hover:text-gray-200"
           >
-            <X className="w-5 h-5 text-gray-500" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
-        <div className="p-3 bg-gray-50 rounded-lg mb-3 text-sm border border-gray-200">
+        <div className="p-3 bg-gray-800/70 rounded-lg mb-4 text-sm border border-gray-700/50">
           <div className="flex mb-1">
-            <span className="text-blue-600 font-bold mr-1">
+            <span className="text-indigo-400 font-bold mr-1">
               #{currentItem?.id}
             </span>
-            <span className="text-gray-500">Inspection Item</span>
+            <span className="text-gray-400">Inspection Item</span>
           </div>
-          <p className="text-gray-800 font-medium">
+          <p className="text-gray-200 font-medium">
             {currentItem?.description}
           </p>
         </div>
 
-        <label className="block mb-1.5 text-sm font-medium text-gray-700">
+        <label className="block mb-2 text-sm font-medium text-gray-300">
           What's the issue?
         </label>
         <textarea
           value={failReason}
           onChange={(e) => onChangeReason(e.target.value)}
-          className={`w-full p-3 border ${
-            failReasonError ? "border-red-500" : "border-gray-300"
-          } rounded-lg mb-1.5 h-24 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none shadow-sm transition-all`}
+          className="w-full p-3 border bg-gray-800/60 border-gray-700/50 rounded-lg mb-2 h-24 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none shadow-sm transition-all text-white placeholder-gray-500"
           placeholder="Describe the issue in detail..."
         />
         {failReasonError && (
-          <p className="text-red-500 text-xs mb-2 flex items-center">
+          <p className="text-red-400 text-xs mb-3 flex items-center">
             <AlertTriangle className="w-3 h-3 mr-1" />
             {failReasonError}
           </p>
         )}
 
-        <div className="flex justify-end space-x-2 mt-3">
+        <div className="flex justify-end space-x-3 mt-4">
           <button
             onClick={onCancel}
-            className="px-4 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors border border-gray-200"
+            className="px-4 py-2 text-sm bg-gray-800 text-gray-300 rounded-lg hover:bg-gray-700 transition-colors border border-gray-700"
           >
             Cancel
           </button>
           <button
             onClick={onSubmit}
-            className="px-4 py-2 text-sm bg-gradient-to-r from-red-500 to-red-600 text-white rounded-lg hover:from-red-600 hover:to-red-700 transition-all duration-300 shadow-md hover:shadow-lg flex items-center"
+            className="px-4 py-2 text-sm bg-gradient-to-r from-red-600 to-red-700 text-white rounded-lg hover:from-red-700 hover:to-red-800 transition-all duration-300 shadow-md hover:shadow-lg flex items-center border border-red-500/30"
           >
             <Send className="h-3.5 w-3.5 mr-1.5" />
             Submit

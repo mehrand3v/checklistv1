@@ -7,7 +7,13 @@ import {
   ANALYTICS_EVENTS,
   logCustomEvent,
 } from "@/services/analytics";
-import { ClipboardCheck, Coffee, Lock } from "lucide-react";
+import { ClipboardCheck, Coffee, Lock, ArrowLeft } from "lucide-react";
+import {
+  useMotionTemplate,
+  useMotionValue,
+  motion,
+  animate,
+} from "framer-motion";
 
 const LoginPage = () => {
   const [email, setEmail] = useState("");
@@ -15,6 +21,23 @@ const LoginPage = () => {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+
+  // Add the same color animation as HomePage
+  const COLORS = ["#3B82F6", "#10B981", "#6366F1", "#8B5CF6"];
+  const color = useMotionValue(COLORS[0]);
+
+  useEffect(() => {
+    animate(color, COLORS, {
+      ease: "easeInOut",
+      duration: 10,
+      repeat: Infinity,
+      repeatType: "mirror",
+    });
+  }, []);
+
+  const backgroundImage = useMotionTemplate`radial-gradient(125% 125% at 50% 0%, #1E293B 30%, ${color})`;
+  const border = useMotionTemplate`1px solid ${color}`;
+  const boxShadow = useMotionTemplate`0px 4px 24px ${color}`;
 
   useEffect(() => {
     // Check if user is already logged in
@@ -49,23 +72,30 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100">
-      <div className="w-full max-w-md p-8 bg-white rounded-xl shadow-lg">
+    <motion.div
+      style={{ backgroundImage }}
+      className="flex items-center justify-center min-h-[100dvh] overflow-hidden"
+    >
+      <div className="w-full max-w-md p-8 bg-gray-800/40 backdrop-blur-sm rounded-xl border border-gray-700/50 shadow-lg mx-4">
+        <div className="flex items-center mb-2">
+          <button
+            onClick={() => navigate("/")}
+            className="p-2 mr-2 rounded-full bg-gray-700/50 hover:bg-gray-700 text-gray-300 transition-colors"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+          <h1 className="text-2xl font-bold text-white">Admin Login</h1>
+        </div>
+
         <div className="flex items-center justify-center mb-8">
-          <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mr-4">
-            <ClipboardCheck className="w-8 h-8 text-blue-600" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-800">
-              Store Inspection
-            </h1>
-            <p className="text-gray-600">Admin Dashboard</p>
+          <div className="w-16 h-16 bg-blue-900/30 rounded-full flex items-center justify-center border border-blue-500/30 mb-2">
+            <ClipboardCheck className="w-8 h-8 text-blue-400" />
           </div>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {error && (
-            <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
+            <div className="p-3 bg-red-900/30 border border-red-500/30 text-red-300 rounded-lg text-sm">
               {error}
             </div>
           )}
@@ -73,7 +103,7 @@ const LoginPage = () => {
           <div>
             <label
               htmlFor="email"
-              className="block text-sm font-medium text-gray-700 mb-1"
+              className="block text-sm font-medium text-gray-300 mb-1"
             >
               Email Address
             </label>
@@ -82,7 +112,7 @@ const LoginPage = () => {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+              className="w-full p-3 border border-gray-700 bg-gray-800/60 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-white"
               placeholder="admin@company.com"
               required
             />
@@ -91,7 +121,7 @@ const LoginPage = () => {
           <div>
             <label
               htmlFor="password"
-              className="block text-sm font-medium text-gray-700 mb-1"
+              className="block text-sm font-medium text-gray-300 mb-1"
             >
               Password
             </label>
@@ -101,18 +131,21 @@ const LoginPage = () => {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                className="w-full p-3 border border-gray-700 bg-gray-800/60 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-white"
                 placeholder="••••••••"
                 required
               />
-              <Lock className="absolute right-3 top-3 h-5 w-5 text-gray-400" />
+              <Lock className="absolute right-3 top-3 h-5 w-5 text-gray-500" />
             </div>
           </div>
 
-          <button
+          <motion.button
             type="submit"
             disabled={loading}
-            className="w-full px-4 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-300 font-medium shadow-md hover:shadow-lg disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center"
+            style={{ border, boxShadow }}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            className="w-full px-4 py-3 bg-blue-600/20 text-white rounded-lg hover:bg-blue-700/30 transition-all duration-300 font-medium flex items-center justify-center"
           >
             {loading ? (
               <>
@@ -141,15 +174,15 @@ const LoginPage = () => {
             ) : (
               "Sign In"
             )}
-          </button>
+          </motion.button>
         </form>
 
-        <div className="mt-6 text-center text-sm text-gray-600">
+        <div className="mt-6 text-center text-sm text-gray-400">
           <Coffee className="inline-block w-4 h-4 mr-1 mb-1" />
           Administrative access only
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 };
 

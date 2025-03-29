@@ -106,7 +106,7 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-b from-gray-900 to-blue-900">
       {/* Mobile notice for small screens */}
       {screenWidth < 768 && (
         <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 md:hidden">
@@ -123,7 +123,7 @@ const Dashboard = () => {
       )}
 
       {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200">
+      <header className="bg-gray-800/40 backdrop-blur-sm border-b border-gray-700/50 shadow-md">
         <div className="container mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center">
             <ClipboardCheck className="h-7 w-7 text-blue-600 mr-2" />
@@ -154,7 +154,7 @@ const Dashboard = () => {
             </div>
             <button
               onClick={handleLogout}
-              className="flex items-center px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors"
+              className="flex items-center px-3 py-2 bg-red-500/20 text-red-300 border border-red-500/30 rounded-lg hover:bg-red-500/30 transition-colors"
             >
               <LogOut className="h-4 w-4 mr-1" />
               Logout

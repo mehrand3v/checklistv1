@@ -5,34 +5,31 @@ import confetti from "canvas-confetti";
 
 const InspectionComplete = ({ stats, onStartNew }) => {
   // Trigger confetti animation when component mounts
-  useEffect(() => {
-    // First burst of confetti
-    confetti({
-      particleCount: 100,
-      spread: 70,
-      origin: { y: 0.6 },
-    });
+ const triggerConfetti = () => {
+   confetti({
+     particleCount: 100,
+     spread: 70,
+     origin: { y: 0.6 },
+   });
 
-    // Second burst after a short delay
-    setTimeout(() => {
-      confetti({
-        particleCount: 50,
-        angle: 60,
-        spread: 55,
-        origin: { x: 0 },
-      });
-    }, 250);
+   setTimeout(() => {
+     confetti({
+       particleCount: 50,
+       angle: 60,
+       spread: 55,
+       origin: { x: 0 },
+     });
+   }, 250);
 
-    // Third burst from the opposite side
-    setTimeout(() => {
-      confetti({
-        particleCount: 50,
-        angle: 120,
-        spread: 55,
-        origin: { x: 1 },
-      });
-    }, 400);
-  }, []);
+   setTimeout(() => {
+     confetti({
+       particleCount: 50,
+       angle: 120,
+       spread: 55,
+       origin: { x: 1 },
+     });
+   }, 400);
+ };
 
   return (
     <div className="text-center p-6 bg-gradient-to-br from-white to-blue-50 rounded-xl shadow-lg w-full max-w-xs border border-blue-100">
@@ -81,8 +78,11 @@ const InspectionComplete = ({ stats, onStartNew }) => {
 
       <div className="mt-6">
         <button
-          onClick={onStartNew}
-          className="px-6 py-3 text-sm bg-gradient-to-r from-green-500 to-green-600 text-white rounded-full hover:from-green-600 hover:to-green-700 transition-all duration-300 font-medium shadow-md hover:shadow-lg transform hover:-translate-y-1 active:translate-y-0 flex items-center justify-center mx-auto"
+          onClick={() => {
+            triggerConfetti();
+            onStartNew();
+          }}
+          className="px-6 py-3 text-sm bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-full hover:from-blue-600 hover:to-purple-700 transition-all duration-300 font-medium shadow-md hover:shadow-lg transform hover:-translate-y-1 active:translate-y-0 flex items-center justify-center mx-auto"
         >
           <Award className="w-4 h-4 mr-2" />
           Start New Inspection
