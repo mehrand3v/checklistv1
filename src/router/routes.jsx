@@ -13,13 +13,15 @@ import {
   LogOut,
   Menu,
   X,
+  PlusCircle,
 } from "lucide-react";
 import { useState } from "react";
-import { Link, NavLink } from "react-router-dom";
+import { Link, NavLink, useNavigate } from "react-router-dom";
 
 // Layout component with sidebar and main content area
 const AppLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const navigate = useNavigate();
 
   return (
     <div className="flex h-screen bg-gray-100">
@@ -53,6 +55,20 @@ const AppLayout = () => {
               >
                 <Clipboard className="mr-3 h-5 w-5" />
                 Inspections
+              </NavLink>
+              <NavLink
+                to="/inspection/new"
+                className={({ isActive }) =>
+                  `flex items-center px-3 py-3 text-sm font-medium rounded-md transition-colors ${
+                    isActive
+                      ? "text-green-600 bg-green-50"
+                      : "text-gray-600 hover:bg-gray-50"
+                  }`
+                }
+                onClick={() => setSidebarOpen(false)}
+              >
+                <PlusCircle className="mr-3 h-5 w-5" />
+                New Inspection
               </NavLink>
               <NavLink
                 to="/dashboard"
@@ -129,6 +145,19 @@ const AppLayout = () => {
             >
               <Clipboard className="mr-3 h-5 w-5" />
               Inspections
+            </NavLink>
+            <NavLink
+              to="/inspection/new"
+              className={({ isActive }) =>
+                `flex items-center px-3 py-3 text-sm font-medium rounded-md transition-colors ${
+                  isActive
+                    ? "text-green-600 bg-green-50"
+                    : "text-gray-600 hover:bg-gray-50"
+                }`
+              }
+            >
+              <PlusCircle className="mr-3 h-5 w-5" />
+              New Inspection
             </NavLink>
             <NavLink
               to="/dashboard"
@@ -218,6 +247,28 @@ const ComingSoon = () => (
   </div>
 );
 
+// Home page with inspection list and "Start New Inspection" button
+const InspectionHome = () => {
+  const navigate = useNavigate();
+
+  return (
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">Inspections</h1>
+        <button
+          onClick={() => navigate("/inspection/new")}
+          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center"
+        >
+          <PlusCircle className="w-5 h-5 mr-2" />
+          New Inspection
+        </button>
+      </div>
+
+      <InspectionDashboard />
+    </div>
+  );
+};
+
 // Define application routes
 const routes = [
   {
@@ -227,23 +278,36 @@ const routes = [
     children: [
       {
         index: true,
-        element: <InspectionDashboard />,
+        element: <InspectionHome />,
       },
       {
         path: "inspection/new",
         element: (
-          <InspectionSwipeCards
-            onComplete={() => (window.location.href = "/")}
-          />
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <InspectionSwipeCards
+              onComplete={() => (window.location.href = "/")}
+            />
+          </div>
         ),
       },
       {
         path: "inspection/:inspectionId",
-        element: <InspectionDashboard view="details" />,
+        element: (
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <InspectionDashboard view="details" />
+          </div>
+        ),
       },
       {
         path: "dashboard",
-        element: <ComingSoon />,
+        element: (
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <h1 className="text-2xl font-bold text-gray-900 mb-6">
+              Analytics Dashboard
+            </h1>
+            <InspectionDashboard />
+          </div>
+        ),
       },
       {
         path: "stores",

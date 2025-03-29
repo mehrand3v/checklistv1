@@ -13,10 +13,8 @@ import {
   CheckCircle,
   XCircle,
   AlertTriangle,
-  Info,
   FileText,
   ChevronLeft,
-  ChevronRight,
 } from "lucide-react";
 
 const InspectionSwipeCards = ({ onComplete }) => {
@@ -30,16 +28,19 @@ const InspectionSwipeCards = ({ onComplete }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const [historicalView, setHistoricalView] = useState(false);
+  const [processingCard, setProcessingCard] = useState(false);
 
   // Get the inspection hook
-  const { submitInspection, loading } = useInspections();
+  const { submitInspection, loading: submissionLoading } = useInspections({
+    autoFetch: false,
+  });
 
   // Initialize inspection data
   useEffect(() => {
     setInspectionItems([...inspectionData]);
   }, []);
 
-  // Memoized statistics to prevent unnecessary re-calculations
+  // Calculate stats for display
   const stats = useMemo(() => {
     const passCount = inspectionResults.filter(
       (item) => item.status === "pass"
@@ -84,6 +85,7 @@ const InspectionSwipeCards = ({ onComplete }) => {
       setInspectionResults([]);
       setIsCompleted(false);
       setActiveIndex(0);
+      setHistoricalView(false);
 
       // Notify parent component that inspection is complete
       if (onComplete && typeof onComplete === "function") {
@@ -97,9 +99,21 @@ const InspectionSwipeCards = ({ onComplete }) => {
     }
   };
 
+  // Start a new inspection (reset everything)
+  const handleStartNewInspection = () => {
+    setInspectionItems([...inspectionData]);
+    setInspectionResults([]);
+    setIsCompleted(false);
+    setActiveIndex(0);
+    setHistoricalView(false);
+    toast.info("Started new inspection");
+  };
+
   // Handle the swipe left (fail) action
   const handleFail = useCallback((item) => {
-    setCurrentItem(item);
+    // Save the item before opening modal
+    setCurrentItem({ ...item });
+    setProcessingCard(true);
     setShowModal(true);
     setFailReason("");
     setFailReasonError("");
@@ -107,6 +121,8 @@ const InspectionSwipeCards = ({ onComplete }) => {
 
   // Handle the swipe right (pass) action
   const handlePass = useCallback((item) => {
+    setProcessingCard(true);
+
     const result = {
       id: item.id,
       description: item.description,
@@ -117,6 +133,8 @@ const InspectionSwipeCards = ({ onComplete }) => {
     setInspectionResults((prev) => [...prev, result]);
     removeItemFromQueue(item.id);
     toast.success("Item passed!");
+
+    setProcessingCard(false);
   }, []);
 
   // Add quick buttons to pass/fail without swiping
@@ -165,7 +183,16 @@ const InspectionSwipeCards = ({ onComplete }) => {
     setShowModal(false);
     removeItemFromQueue(currentItem.id);
     toast.info("Item failed and documented");
+    setProcessingCard(false);
   }, [currentItem, failReason, removeItemFromQueue]);
+
+  // Handle cancel from fail modal - don't remove the item
+  const handleCancelFail = () => {
+    setShowModal(false);
+    setFailReason("");
+    setFailReasonError("");
+    setProcessingCard(false);
+  };
 
   // Toggle history view
   const toggleHistoryView = () => {
@@ -176,24 +203,39 @@ const InspectionSwipeCards = ({ onComplete }) => {
     <div className="flex flex-col items-center w-full">
       {/* Header with inspection stats */}
       <header className="w-full max-w-md mb-6 bg-white rounded-lg shadow-md p-4">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex justify-between items-center mb-4">
           <h1 className="text-xl font-bold text-gray-900">Safety Inspection</h1>
-          <button
-            onClick={toggleHistoryView}
-            className="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md transition-colors flex items-center"
-          >
-            {historicalView ? (
-              <>
-                <ChevronLeft className="w-4 h-4 mr-1" />
-                Back to Cards
-              </>
-            ) : (
-              <>
-                <FileText className="w-4 h-4 mr-1" />
-                View Results
-              </>
+          <div className="flex space-x-2">
+            {inspectionResults.length > 0 && (
+              <button
+                onClick={toggleHistoryView}
+                className="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md transition-colors flex items-center"
+              >
+                {historicalView ? (
+                  <>
+                    <ChevronLeft className="w-4 h-4 mr-1" />
+                    Back to Cards
+                  </>
+                ) : (
+                  <>
+                    <FileText className="w-4 h-4 mr-1" />
+                    View Results
+                  </>
+                )}
+              </button>
             )}
-          </button>
+
+            {/* Show New Inspection button when all items are gone or when inspection is complete */}
+            {(inspectionItems.length === 0 || isCompleted) && (
+              <button
+                onClick={handleStartNewInspection}
+                className="px-3 py-1 text-sm bg-green-100 hover:bg-green-200 text-green-700 rounded-md transition-colors flex items-center"
+              >
+                <CheckCircle className="w-4 h-4 mr-1" />
+                New Inspection
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="grid grid-cols-3 gap-4 mb-4">
@@ -240,15 +282,15 @@ const InspectionSwipeCards = ({ onComplete }) => {
           <div className="relative h-[500px] w-full max-w-md mb-6 bg-gray-50 rounded-lg shadow-inner overflow-hidden flex items-center justify-center">
             {inspectionItems.length > 0 ? (
               <AnimatePresence mode="wait">
-                <InspectionCard
-                  key={inspectionItems[inspectionItems.length - 1].id}
-                  item={inspectionItems[inspectionItems.length - 1]}
-                  items={inspectionItems}
-                  setItems={setInspectionItems}
-                  onFail={handleFail}
-                  onPass={handlePass}
-                  onQuickAction={handleQuickAction}
-                />
+                {!processingCard && (
+                  <InspectionCard
+                    key={inspectionItems[inspectionItems.length - 1].id}
+                    item={inspectionItems[inspectionItems.length - 1]}
+                    onFail={handleFail}
+                    onPass={handlePass}
+                    onQuickAction={handleQuickAction}
+                  />
+                )}
               </AnimatePresence>
             ) : (
               <div className="text-center p-6 bg-white rounded-lg shadow-md">
@@ -270,6 +312,15 @@ const InspectionSwipeCards = ({ onComplete }) => {
                     Pass rate: {stats.passRate}%
                   </div>
                 )}
+
+                <div className="mt-6">
+                  <button
+                    onClick={handleStartNewInspection}
+                    className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+                  >
+                    Start New Inspection
+                  </button>
+                </div>
               </div>
             )}
           </div>
@@ -301,7 +352,7 @@ const InspectionSwipeCards = ({ onComplete }) => {
                 </div>
               </div>
               <div className="mt-3 p-3 bg-blue-50 rounded-md flex items-start">
-                <Info className="h-6 w-6 mr-2 text-blue-600 flex-shrink-0" />
+                <AlertTriangle className="h-6 w-6 mr-2 text-blue-600 flex-shrink-0" />
                 <p className="text-sm text-gray-700">
                   For failed items, you'll be prompted to provide details about
                   the issue.
@@ -430,7 +481,7 @@ const InspectionSwipeCards = ({ onComplete }) => {
 
             <div className="flex justify-end space-x-3 mt-4">
               <button
-                onClick={() => setShowModal(false)}
+                onClick={handleCancelFail}
                 className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 transition-colors"
               >
                 Cancel
@@ -465,6 +516,7 @@ const InspectionSwipeCards = ({ onComplete }) => {
 const InspectionCard = ({ item, onFail, onPass, onQuickAction }) => {
   const x = useMotionValue(0);
   const controls = useAnimation();
+  const [isProcessing, setIsProcessing] = useState(false);
 
   // Using smaller values in the transform ranges for more responsive visual feedback
   const rotateRaw = useTransform(x, [-150, 0, 150], [-15, 0, 15]);
@@ -505,15 +557,19 @@ const InspectionCard = ({ item, onFail, onPass, onQuickAction }) => {
 
   // Simplified drag handling
   const handleDragEnd = (_, info) => {
+    if (isProcessing) return;
+
     const swipeVelocity = Math.abs(info.velocity.x);
     const currentX = x.get();
 
     if (currentX < -100 || (currentX < 0 && swipeVelocity > 300)) {
       // Swiped Left - Fail
+      setIsProcessing(true);
       animateCardExit("left");
       onFail && onFail(item);
     } else if (currentX > 100 || (currentX > 0 && swipeVelocity > 300)) {
       // Swiped Right - Pass
+      setIsProcessing(true);
       animateCardExit("right");
       onPass && onPass(item);
     } else {
@@ -545,11 +601,23 @@ const InspectionCard = ({ item, onFail, onPass, onQuickAction }) => {
 
   // Helper for keyboard/accessibility support
   const handleKeyDown = (e) => {
+    if (isProcessing) return;
+
     if (e.key === "ArrowLeft") {
+      setIsProcessing(true);
       onQuickAction("fail", item);
     } else if (e.key === "ArrowRight") {
+      setIsProcessing(true);
       onQuickAction("pass", item);
     }
+  };
+
+  // Handle quick action buttons
+  const handleButtonAction = (action) => {
+    if (isProcessing) return;
+
+    setIsProcessing(true);
+    onQuickAction(action, item);
   };
 
   return (
@@ -613,17 +681,19 @@ const InspectionCard = ({ item, onFail, onPass, onQuickAction }) => {
           {/* Action buttons */}
           <div className="mt-auto flex justify-center space-x-6 py-4">
             <button
-              onClick={() => onQuickAction("fail", item)}
+              onClick={() => handleButtonAction("fail")}
               className="flex items-center justify-center px-6 py-3 bg-red-100 text-red-600 rounded-full hover:bg-red-200 transition-colors shadow-md active:shadow-sm active:translate-y-0.5"
               aria-label="Fail inspection item"
+              disabled={isProcessing}
             >
               <XCircle className="h-6 w-6 mr-2" />
               FAIL
             </button>
             <button
-              onClick={() => onQuickAction("pass", item)}
+              onClick={() => handleButtonAction("pass")}
               className="flex items-center justify-center px-6 py-3 bg-green-100 text-green-600 rounded-full hover:bg-green-200 transition-colors shadow-md active:shadow-sm active:translate-y-0.5"
               aria-label="Pass inspection item"
+              disabled={isProcessing}
             >
               PASS
               <CheckCircle className="h-6 w-6 ml-2" />

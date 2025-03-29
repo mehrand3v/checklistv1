@@ -77,9 +77,13 @@ const InspectionDashboard = () => {
     autoFetch: true,
   });
 
-  // Refresh data handler
-  const handleRefresh = () => {
-    fetchInspections(true); // Force refresh
+  // Refresh data handler with loading state management
+  const handleRefresh = async () => {
+    try {
+      await fetchInspections(true); // Force refresh
+    } catch (error) {
+      console.error("Error refreshing data:", error);
+    }
   };
 
   // Prepare chart data based on view mode

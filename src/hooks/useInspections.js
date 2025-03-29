@@ -16,12 +16,29 @@ import {
   deleteDoc,
 } from "firebase/firestore";
 import { db } from "@/services/firebase";
-import { getCurrentUser } from "@/services/auth";
-import { logCustomEvent } from "@/services/analytics";
+// Comment out the auth import since it's not set up yet
+// import { getCurrentUser } from "@/services/auth";
+// Comment out analytics for now
+// import { logCustomEvent } from "@/services/analytics";
+
+// Mock user for development until auth is set up
+const MOCK_USER = {
+  uid: "dev-user-123",
+  displayName: "Test User",
+  email: "test@example.com",
+};
+
+// Mock getCurrentUser function
+const getCurrentUser = () => MOCK_USER;
+
+// Mock analytics function
+const logCustomEvent = (eventName, data) => {
+  console.log(`[Analytics Event]: ${eventName}`, data);
+};
 
 /**
  * Custom hook for managing inspection data with Firestore
- * Enhanced with caching, optimistic updates, and comprehensive stats
+ * Modified to work without authentication for development
  */
 const useInspections = (options = {}) => {
   // Configure hook options with defaults
@@ -38,7 +55,10 @@ const useInspections = (options = {}) => {
   const fetchInspections = useCallback(
     async (forceRefresh = false) => {
       // Don't fetch if we're already loading
-      if (loading) return [];
+      if (loading) {
+        console.log("Already loading, skipping fetch");
+        return inspections;
+      }
 
       // Check if we can use cached data (within the last 5 minutes)
       const now = new Date();
@@ -52,6 +72,7 @@ const useInspections = (options = {}) => {
         cacheResults &&
         inspections.length > 0
       ) {
+        console.log("Using cached data");
         return inspections;
       }
 
@@ -59,36 +80,64 @@ const useInspections = (options = {}) => {
       setError(null);
 
       try {
+        // Use mock user for development
         const user = getCurrentUser();
-        if (!user) {
-          throw new Error("User not authenticated");
-        }
+        console.log("Fetching inspections for user:", user.uid);
 
-        // Create a query to get inspections for the current user
-        const inspectionsQuery = query(
-          collection(db, "inspections"),
-          where("userId", "==", user.uid),
-          orderBy("timestamp", "desc"),
-          limit(limitCount)
-        );
+        // For testing purposes, return fake data instead of hitting Firestore
+        // Remove this block when Firebase is properly set up
+        const fakeInspectionsData = [
+          {
+            id: "fake-inspection-1",
+            userId: user.uid,
+            timestamp: new Date(Date.now() - 86400000 * 2), // 2 days ago
+            items: [],
+            totalItems: 26,
+            passedItems: 23,
+            failedItems: 3,
+            passRate: 88.46,
+          },
+          {
+            id: "fake-inspection-2",
+            userId: user.uid,
+            timestamp: new Date(Date.now() - 86400000 * 5), // 5 days ago
+            items: [],
+            totalItems: 26,
+            passedItems: 24,
+            failedItems: 2,
+            passRate: 92.31,
+          },
+        ];
 
-        const querySnapshot = await getDocs(inspectionsQuery);
-        const inspectionsData = querySnapshot.docs.map((doc) => {
-          const data = doc.data();
-          return {
-            id: doc.id,
-            ...data,
-            timestamp: data.timestamp?.toDate(),
-            // Convert timestamps in inspection items if they exist
-            items: data.items?.map((item) => ({
-              ...item,
-              timestamp:
-                item.timestamp instanceof Timestamp
-                  ? item.timestamp.toDate()
-                  : item.timestamp,
-            })),
-          };
-        });
+        // Uncomment this when Firebase is ready
+        /*
+      // Create a query to get inspections for the mock user
+      const inspectionsQuery = query(
+        collection(db, "inspections"),
+        where("userId", "==", user.uid),
+        orderBy("timestamp", "desc"),
+        limit(limitCount)
+      );
+
+      const querySnapshot = await getDocs(inspectionsQuery);
+      const inspectionsData = querySnapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          timestamp: data.timestamp?.toDate(),
+          // Convert timestamps in inspection items if they exist
+          items: data.items?.map(item => ({
+            ...item,
+            timestamp: item.timestamp instanceof Timestamp ?
+              item.timestamp.toDate() :
+              item.timestamp
+          }))
+        };
+      });
+      */
+
+        const inspectionsData = fakeInspectionsData;
 
         setInspections(inspectionsData);
         setLastFetchTime(new Date());
@@ -161,10 +210,7 @@ const useInspections = (options = {}) => {
       setError(null);
 
       try {
-        const user = getCurrentUser();
-        if (!user) {
-          throw new Error("No authenticated user found");
-        }
+        const user = getCurrentUser(); // Using our mock user
 
         // Calculate summary data
         const passedItems = inspectionResults.filter(
@@ -197,15 +243,16 @@ const useInspections = (options = {}) => {
           },
         };
 
-        // Add to inspections collection
-        const inspectionRef = await addDoc(
-          collection(db, "inspections"),
-          inspectionData
-        );
+        console.log("Submitting inspection data:", inspectionData);
 
-        // Log analytics event
+        // For development without Firebase, fake the submission
+        // Comment this block and uncomment the Firebase code when ready
+        const fakeId = `inspection-${Date.now()}`;
+        console.log(`Created fake inspection with ID: ${fakeId}`);
+
+        // Log analytics event (mock)
         logCustomEvent("inspection_completed", {
-          inspection_id: inspectionRef.id,
+          inspection_id: fakeId,
           total_items: totalItems,
           pass_count: passedItems,
           fail_count: failedItems,
@@ -214,10 +261,22 @@ const useInspections = (options = {}) => {
 
         // Optimistically update local state
         const newInspection = {
-          id: inspectionRef.id,
+          id: fakeId,
           ...inspectionData,
           timestamp: new Date(), // Use local date until server timestamp comes back
         };
+
+        /* Uncomment when Firebase is ready
+      // Add to inspections collection
+      const inspectionRef = await addDoc(collection(db, "inspections"), inspectionData);
+
+      // Optimistically update local state
+      const newInspection = {
+        id: inspectionRef.id,
+        ...inspectionData,
+        timestamp: new Date(), // Use local date until server timestamp comes back
+      };
+      */
 
         setInspections((prev) => [newInspection, ...prev]);
         setSubmitting(false);
@@ -227,7 +286,7 @@ const useInspections = (options = {}) => {
           fetchInspections(true);
         }, 1000);
 
-        return inspectionRef.id;
+        return fakeId; // Change to inspectionRef.id when using Firebase
       } catch (err) {
         console.error("Error submitting inspection:", err);
         setError(`Failed to submit inspection: ${err.message}`);
@@ -242,9 +301,6 @@ const useInspections = (options = {}) => {
   const updateInspection = useCallback(async (inspectionId, updates) => {
     try {
       const user = getCurrentUser();
-      if (!user) {
-        throw new Error("No authenticated user found");
-      }
 
       const inspectionRef = doc(db, "inspections", inspectionId);
       const inspectionSnap = await getDoc(inspectionRef);
@@ -289,9 +345,6 @@ const useInspections = (options = {}) => {
   const deleteInspection = useCallback(async (inspectionId) => {
     try {
       const user = getCurrentUser();
-      if (!user) {
-        throw new Error("No authenticated user found");
-      }
 
       // First verify ownership
       const inspectionRef = doc(db, "inspections", inspectionId);
@@ -387,9 +440,23 @@ const useInspections = (options = {}) => {
 
   // Initialize data fetching on mount if autoFetch is enabled
   useEffect(() => {
+    let mounted = true;
+
     if (autoFetch) {
-      fetchInspections();
+      const doFetch = async () => {
+        try {
+          await fetchInspections();
+        } catch (err) {
+          console.error("Error in auto-fetch:", err);
+        }
+      };
+
+      doFetch();
     }
+
+    return () => {
+      mounted = false;
+    };
   }, [autoFetch, fetchInspections]);
 
   return {
