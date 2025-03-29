@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+// Use a consistent version of framer-motion imports
 import {
   motion,
   useMotionValue,
@@ -14,6 +15,23 @@ const InspectionSwipeCards = ({ onComplete }) => {
   const [failReason, setFailReason] = useState("");
   const [inspectionResults, setInspectionResults] = useState([]);
   const [isCompleted, setIsCompleted] = useState(false);
+  const [touchStarted, setTouchStarted] = useState(false);
+
+  // Enable passive touch listeners for better mobile performance
+  useEffect(() => {
+    // Add touch start event listener to document to improve initial touch responsiveness
+    const handleTouchStart = () => {
+      setTouchStarted(true);
+    };
+
+    document.addEventListener("touchstart", handleTouchStart, {
+      passive: true,
+    });
+
+    return () => {
+      document.removeEventListener("touchstart", handleTouchStart);
+    };
+  }, []);
 
   // Use our custom hook
   const { submitInspection } = useInspections();
@@ -268,39 +286,71 @@ const InspectionCard = ({
 }) => {
   const x = useMotionValue(0);
   const controls = useAnimation();
-  const rotateRaw = useTransform(x, [-150, 150], [-18, 18]);
-  const opacity = useTransform(x, [-150, 0, 150], [0, 1, 0]);
+
+  // Using smaller values in the transform ranges for more responsive visual feedback
+  const rotateRaw = useTransform(x, [-100, 100], [-18, 18]);
+  const opacity = useTransform(x, [-100, 0, 100], [0, 1, 0]);
   const background = useTransform(
     x,
-    [-150, 0, 150],
+    [-100, -50, 0, 50, 100],
     [
+      "rgba(239, 68, 68, 0.4)",
       "rgba(239, 68, 68, 0.2)",
       "rgba(255, 255, 255, 1)",
       "rgba(34, 197, 94, 0.2)",
+      "rgba(34, 197, 94, 0.4)",
     ]
   );
 
-  // Visual indicators for swipe direction
-  const failOpacity = useTransform(x, [-150, -50, 0], [1, 0.5, 0]);
-  const passOpacity = useTransform(x, [0, 50, 150], [0, 0.5, 1]);
+  // More sensitive visual indicators for swipe direction
+  const failOpacity = useTransform(x, [-100, -20, 0], [1, 0.5, 0]);
+  const passOpacity = useTransform(x, [0, 20, 100], [0, 0.5, 1]);
 
+  // Add haptic feedback for mobile (if supported)
+  const triggerHapticFeedback = (direction) => {
+    if (window.navigator && window.navigator.vibrate) {
+      // Short vibration for tactile feedback
+      window.navigator.vibrate(50);
+    }
+  };
+
+  // Track swipe direction for visual feedback
+  const [swipeDirection, setSwipeDirection] = useState(null);
+  useEffect(() => {
+    // Use the recommended 'on' method instead of the deprecated 'onChange'
+    const unsubscribe = x.on("change", (latest) => {
+      // Provide immediate visual feedback during swipe
+      if (latest < -15 && swipeDirection !== "left") {
+        setSwipeDirection("left");
+        triggerHapticFeedback("left");
+      } else if (latest > 15 && swipeDirection !== "right") {
+        setSwipeDirection("right");
+        triggerHapticFeedback("right");
+      } else if (latest > -10 && latest < 10 && swipeDirection !== null) {
+        setSwipeDirection(null);
+      }
+    });
+
+    return () => unsubscribe();
+  }, [x, swipeDirection]);
+
+  // Using useTransform with a function to ensure consistent version usage
   const isFront = id === items[items.length - 1].id;
-  const rotate = useTransform(() => {
+  const rotate = useTransform(rotateRaw, (value) => {
     const offset = isFront ? 0 : id % 2 ? 6 : -6;
-    return `${rotateRaw.get() + offset}deg`;
+    return `${value + offset}deg`;
   });
 
-  // Optimized drag handling specifically for mobile
+  // Simplified drag handling to avoid version conflicts
   const handleDragEnd = (_, info) => {
-    // Use velocity-based detection for more natural mobile swipes
-    // Lower threshold to 50px but use velocity to determine intent
     const swipeVelocity = Math.abs(info.velocity.x);
+    const currentX = x.get();
 
-    if (x.get() < -50 || (x.get() < 0 && swipeVelocity > 300)) {
+    if (currentX < -30 || (currentX < 0 && swipeVelocity > 300)) {
       // Swiped Left - Fail
       animateCardExit("left");
       onFail && onFail();
-    } else if (x.get() > 50 || (x.get() > 0 && swipeVelocity > 300)) {
+    } else if (currentX > 30 || (currentX > 0 && swipeVelocity > 300)) {
       // Swiped Right - Pass
       animateCardExit("right");
       onPass && onPass();
@@ -308,30 +358,32 @@ const InspectionCard = ({
       // Return to center if not swiped far enough
       controls.start({
         x: 0,
-        transition: { type: "spring", stiffness: 400, damping: 30 },
+        transition: {
+          type: "spring",
+          stiffness: 500,
+          damping: 25,
+        },
       });
     }
   };
 
-  // Add optimized animation for card exit on mobile
+  // Simplified animation for consistent behavior
   const animateCardExit = (direction) => {
-    const xTarget = direction === "left" ? -500 : 500;
+    const xTarget = direction === "left" ? -400 : 400;
 
-    controls
-      .start({
-        x: xTarget,
-        opacity: 0,
-        transition: {
-          duration: 0.15, // Faster animation for mobile
-          ease: "easeOut",
-        },
-      })
-      .then(() => {
-        // Small timeout to ensure animation completes smoothly on mobile
-        setTimeout(() => {
-          setItems((pv) => pv.filter((v) => v.id !== id));
-        }, 50);
-      });
+    controls.start({
+      x: xTarget,
+      opacity: 0,
+      transition: {
+        duration: 0.2,
+        ease: "easeOut",
+      },
+    });
+
+    // Remove the item with a slight delay to ensure animation is visible
+    setTimeout(() => {
+      setItems((pv) => pv.filter((v) => v.id !== id));
+    }, 200);
   };
 
   // Helper for keyboard/accessibility support
@@ -366,12 +418,10 @@ const InspectionCard = ({
         left: 0,
         right: 0,
       }}
-      dragElastic={1} // Maximum elasticity for mobile swipes
-      dragTransition={{
-        power: 0.2, // Lower power for smoother mobile interaction
-        timeConstant: 200, // Shorter time constant for quicker response
-        modifyTarget: (target) => (Math.abs(target) < 20 ? 0 : target), // Snap to center if swipe is very small
-      }}
+      dragElastic={1.2} // Super-elastic for hyper-responsive swipes
+      dragMomentum={true} // Ensure momentum is enabled
+      dragDirectionLock={true} // Lock to horizontal direction for more predictable swipes
+      onDragEnd={handleDragEnd}
       onDragEnd={handleDragEnd}
       whileTap={{ cursor: "grabbing" }}
       tabIndex={isFront ? 0 : -1}
