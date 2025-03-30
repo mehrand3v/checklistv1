@@ -1,4 +1,4 @@
-// src/hooks/useInspections.js - Updated for Firebase
+// src/hooks/useInspections.js
 import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   collection,
@@ -7,7 +7,6 @@ import {
   getDoc,
   getDocs,
   query,
-  where,
   orderBy,
   limit,
   serverTimestamp,
@@ -16,29 +15,18 @@ import {
   deleteDoc,
 } from "firebase/firestore";
 import { db } from "@/services/firebase";
-// Comment out the auth import since it's not set up yet
-// import { getCurrentUser } from "@/services/auth";
-// Comment out analytics for now
-// import { logCustomEvent } from "@/services/analytics";
+import { auth } from "@/services/firebase";
 
-// Mock user for development until auth is set up
-const MOCK_USER = {
-  uid: "dev-user-123",
-  displayName: "Test User",
-  email: "test@example.com",
-};
+// Real authentication functions
+const getCurrentUser = () => auth.currentUser;
 
-// Mock getCurrentUser function
-const getCurrentUser = () => MOCK_USER;
-
-// Mock analytics function
+// Analytics function
 const logCustomEvent = (eventName, data) => {
   console.log(`[Analytics Event]: ${eventName}`, data);
 };
 
 /**
  * Custom hook for managing inspection data with Firestore
- * Modified to work without authentication for development
  */
 const useInspections = (options = {}) => {
   // Configure hook options with defaults
@@ -51,7 +39,7 @@ const useInspections = (options = {}) => {
   const [error, setError] = useState(null);
   const [lastFetchTime, setLastFetchTime] = useState(null);
 
-  // Fetch inspections from Firestore
+  // Fetch inspections from Firestore - updated to get all inspections without filtering by userId
   const fetchInspections = useCallback(
     async (forceRefresh = false) => {
       // Don't fetch if we're already loading
@@ -60,7 +48,7 @@ const useInspections = (options = {}) => {
         return inspections;
       }
 
-      // Check if we can use cached data (within the last 5 minutes)
+      // Check if we can use cached data
       const now = new Date();
       const cacheStillValid =
         lastFetchTime &&
@@ -80,14 +68,9 @@ const useInspections = (options = {}) => {
       setError(null);
 
       try {
-        // Use mock user for development
-        const user = getCurrentUser();
-        console.log("Fetching inspections for user:", user.uid);
-
-        // Create a query to get inspections for the mock user
+        // Create a query to get all inspections sorted by timestamp
         const inspectionsQuery = query(
           collection(db, "inspections"),
-          where("userId", "==", user.uid),
           orderBy("timestamp", "desc"),
           limit(limitCount)
         );
@@ -165,103 +148,116 @@ const useInspections = (options = {}) => {
   );
 
   // Submit a new inspection with improved error handling and validation
-const submitInspection = useCallback(
-  async (inspectionResults, inspectorName = null) => {
-    if (submitting) return null;
+  const submitInspection = useCallback(
+    async (inspectionResults, inspectorName = null) => {
+      if (submitting) return null;
 
-    if (
-      !inspectionResults ||
-      !Array.isArray(inspectionResults) ||
-      inspectionResults.length === 0
-    ) {
-      throw new Error("Invalid inspection data");
-    }
+      if (
+        !inspectionResults ||
+        !Array.isArray(inspectionResults) ||
+        inspectionResults.length === 0
+      ) {
+        throw new Error("Invalid inspection data");
+      }
 
-    setSubmitting(true);
-    setError(null);
+      setSubmitting(true);
+      setError(null);
 
-    try {
-      const user = getCurrentUser(); // Using our mock user for backend auth
+      try {
+        // Get current user if logged in (admin)
+        const user = getCurrentUser();
 
-      // Calculate summary data
-      const passedItems = inspectionResults.filter(
-        (item) => item.status === "pass"
-      ).length;
-      const failedItems = inspectionResults.filter(
-        (item) => item.status === "fail"
-      ).length;
-      const totalItems = inspectionResults.length;
-      const passRate = totalItems > 0 ? (passedItems / totalItems) * 100 : 0;
+        // Calculate summary data
+        const satisfactoryItems = inspectionResults.filter(
+          (item) => item.status === "pass"
+        ).length;
+        const issueItems = inspectionResults.filter(
+          (item) => item.status === "fail"
+        ).length;
+        const totalItems = inspectionResults.length;
 
-      // Prepare inspection data with standardized timestamps
-      const inspectionData = {
-        userId: user.uid, // Keep this for backend permission checks
-        userName: inspectorName || user.displayName || "Anonymous User", // Use inspector name if provided
-        userEmail: user.email,
-        submittedBy: inspectorName || user.displayName || "Anonymous User", // Add explicit submittedBy field
-        timestamp: serverTimestamp(),
-        completedAt: new Date().toISOString(),
-        items: inspectionResults,
-        totalItems,
-        passedItems,
-        failedItems,
-        passRate: Math.round(passRate * 100) / 100, // Still track for analytics
-        deviceInfo: {
-          platform: navigator.platform,
-          userAgent: navigator.userAgent,
-          language: navigator.language,
-          screenWidth: window.screen.width,
-          screenHeight: window.screen.height,
-        },
-      };
+        // Prepare inspection data
+        const inspectionData = {
+          // Information about who submitted it
+          submittedBy: inspectorName || "Anonymous Inspector",
 
-      console.log("Submitting inspection data:", inspectionData);
+          // Admin information if an admin is logged in
+          adminId: user ? user.uid : null,
+          adminEmail: user ? user.email : null,
+          isAdminSubmission: !!user,
 
-      // Add to inspections collection
-      const inspectionRef = await addDoc(
-        collection(db, "inspections"),
-        inspectionData
-      );
+          // Timestamp information
+          timestamp: serverTimestamp(),
+          completedAt: new Date().toISOString(),
 
-      // Log analytics event
-      logCustomEvent("inspection_completed", {
-        inspection_id: inspectionRef.id,
-        total_items: totalItems,
-        pass_count: passedItems,
-        fail_count: failedItems,
-        inspector_name: inspectorName || "Anonymous",
-      });
+          // Inspection data
+          items: inspectionResults,
+          totalItems,
+          satisfactoryItems, // Renamed from passedItems
+          issueItems, // Renamed from failedItems
 
-      // Optimistically update local state
-      const newInspection = {
-        id: inspectionRef.id,
-        ...inspectionData,
-        timestamp: new Date(), // Use local date until server timestamp comes back
-      };
+          // Device info
+          deviceInfo: {
+            platform: navigator.platform,
+            userAgent: navigator.userAgent,
+            language: navigator.language,
+            screenWidth: window.screen.width,
+            screenHeight: window.screen.height,
+          },
+        };
 
-      setInspections((prev) => [newInspection, ...prev]);
-      setSubmitting(false);
+        console.log("Submitting inspection data:", inspectionData);
 
-      // Force refresh to get the server timestamp
-      setTimeout(() => {
-        fetchInspections(true);
-      }, 1000);
+        // Add to inspections collection
+        const inspectionRef = await addDoc(
+          collection(db, "inspections"),
+          inspectionData
+        );
 
-      return inspectionRef.id;
-    } catch (err) {
-      console.error("Error submitting inspection:", err);
-      setError(`Failed to submit inspection: ${err.message}`);
-      setSubmitting(false);
-      throw new Error(`Failed to submit inspection: ${err.message}`);
-    }
-  },
-  [submitting, fetchInspections]
-);
+        // Log analytics event
+        logCustomEvent("inspection_completed", {
+          inspection_id: inspectionRef.id,
+          total_items: totalItems,
+          satisfactory_count: satisfactoryItems,
+          issue_count: issueItems,
+          inspector_name: inspectorName || "Anonymous",
+        });
 
-  // Update an existing inspection
+        // Optimistically update local state
+        const newInspection = {
+          id: inspectionRef.id,
+          ...inspectionData,
+          timestamp: new Date(), // Use local date until server timestamp comes back
+        };
+
+        setInspections((prev) => [newInspection, ...prev]);
+        setSubmitting(false);
+
+        // Force refresh to get the server timestamp
+        setTimeout(() => {
+          fetchInspections(true);
+        }, 1000);
+
+        return inspectionRef.id;
+      } catch (err) {
+        console.error("Error submitting inspection:", err);
+        setError(`Failed to submit inspection: ${err.message}`);
+        setSubmitting(false);
+        throw new Error(`Failed to submit inspection: ${err.message}`);
+      }
+    },
+    [submitting, fetchInspections]
+  );
+
+  // Update an existing inspection - only for admins
   const updateInspection = useCallback(async (inspectionId, updates) => {
     try {
       const user = getCurrentUser();
+
+      // Only allow authenticated users (admins) to update
+      if (!user) {
+        throw new Error("You must be logged in to update inspections");
+      }
 
       const inspectionRef = doc(db, "inspections", inspectionId);
       const inspectionSnap = await getDoc(inspectionRef);
@@ -270,18 +266,12 @@ const submitInspection = useCallback(
         throw new Error("Inspection not found");
       }
 
-      const inspectionData = inspectionSnap.data();
-
-      // Verify ownership
-      if (inspectionData.userId !== user.uid) {
-        throw new Error("Not authorized to update this inspection");
-      }
-
       // Add metadata about the update
       const updateData = {
         ...updates,
         lastUpdated: serverTimestamp(),
         lastUpdatedBy: user.uid,
+        lastUpdatedByEmail: user.email,
       };
 
       await updateDoc(inspectionRef, updateData);
@@ -302,23 +292,21 @@ const submitInspection = useCallback(
     }
   }, []);
 
-  // Delete an inspection
+  // Delete an inspection - only for admins
   const deleteInspection = useCallback(async (inspectionId) => {
     try {
       const user = getCurrentUser();
 
-      // First verify ownership
+      // Only allow authenticated users (admins) to delete
+      if (!user) {
+        throw new Error("You must be logged in to delete inspections");
+      }
+
       const inspectionRef = doc(db, "inspections", inspectionId);
       const inspectionSnap = await getDoc(inspectionRef);
 
       if (!inspectionSnap.exists()) {
         throw new Error("Inspection not found");
-      }
-
-      const inspectionData = inspectionSnap.data();
-
-      if (inspectionData.userId !== user.uid) {
-        throw new Error("Not authorized to delete this inspection");
       }
 
       await deleteDoc(inspectionRef);
@@ -335,7 +323,7 @@ const submitInspection = useCallback(
     }
   }, []);
 
-  // Calculate statistics from inspection data
+  // Calculate statistics from inspection data - updated terminology
   const stats = useMemo(() => {
     // Define time periods
     const now = new Date();
@@ -354,34 +342,21 @@ const submitInspection = useCallback(
       (insp) => insp.timestamp && insp.timestamp > oneMonthAgo
     );
 
-    // Calculate pass rates for different time periods
-    const calcPassRate = (inspGroup) => {
-      const totalPassed = inspGroup.reduce(
-        (sum, insp) => sum + (insp.passedItems || 0),
-        0
-      );
-      const totalItems = inspGroup.reduce(
-        (sum, insp) => sum + (insp.totalItems || 0),
-        0
-      );
-      return totalItems > 0 ? (totalPassed / totalItems) * 100 : 0;
-    };
-
-    // Get most failed items across all inspections
-    const failedItemsMap = new Map();
+    // Get most common issues across all inspections
+    const issueItemsMap = new Map();
     inspections.forEach((insp) => {
       if (insp.items && Array.isArray(insp.items)) {
         insp.items
           .filter((item) => item.status === "fail")
           .forEach((item) => {
-            const count = failedItemsMap.get(item.id) || 0;
-            failedItemsMap.set(item.id, count + 1);
+            const count = issueItemsMap.get(item.id) || 0;
+            issueItemsMap.set(item.id, count + 1);
           });
       }
     });
 
-    // Convert to array and sort to find most common failures
-    const mostCommonFailures = Array.from(failedItemsMap.entries())
+    // Convert to array and sort to find most common issues
+    const mostCommonIssues = Array.from(issueItemsMap.entries())
       .map(([id, count]) => ({ id, count }))
       .sort((a, b) => b.count - a.count)
       .slice(0, 5);
@@ -391,11 +366,7 @@ const submitInspection = useCallback(
       today: todayInspections.length,
       thisWeek: weekInspections.length,
       thisMonth: monthInspections.length,
-      totalPassRate: calcPassRate(inspections),
-      todayPassRate: calcPassRate(todayInspections),
-      weekPassRate: calcPassRate(weekInspections),
-      monthPassRate: calcPassRate(monthInspections),
-      mostCommonFailures,
+      mostCommonIssues, // Renamed from mostCommonFailures
     };
   }, [inspections]);
 
@@ -432,7 +403,7 @@ const submitInspection = useCallback(
     updateInspection,
     deleteInspection,
     // Derived data methods
-    getFailureStats: () => stats.mostCommonFailures,
+    getIssueStats: () => stats.mostCommonIssues, // Renamed from getFailureStats
     getRecentInspections: (count = 5) => inspections.slice(0, count),
   };
 };

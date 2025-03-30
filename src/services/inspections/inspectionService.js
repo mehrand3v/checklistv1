@@ -11,7 +11,52 @@ import {
   Timestamp,
 } from "firebase/firestore";
 import { db } from "@/services/firebase";
+export const getInspections = async ({
+  storeId = "all",
+  startDate = null,
+  endDate = null,
+  searchQuery = "",
+  page = 1,
+  itemsPerPage = 25,
+  sortField = "timestamp",
+  sortDirection = "desc",
+}) => {
+  try {
+    // Build your Firestore query here
+    // Using the parameters to filter and sort results
 
+    // Return formatted data with pagination info
+    return {
+      data: inspections,
+      total: totalCount,
+    };
+  } catch (error) {
+    console.error("Error getting inspections:", error);
+    throw error;
+  }
+};
+
+// Get common issues data for analytics
+export const getCommonIssues = async (storeId, dateRange) => {
+  try {
+    // Implement your query to get most common issues
+    return commonIssuesData;
+  } catch (error) {
+    console.error('Error getting common issues:', error);
+    throw error;
+  }
+};
+
+// Get store performance data
+export const getStorePerformance = async (dateRange) => {
+  try {
+    // Implement your query to get store performance data
+    return storePerformanceData;
+  } catch (error) {
+    console.error('Error getting store performance:', error);
+    throw error;
+  }
+};
 // Fetch all stores
 export const getStores = async () => {
   try {

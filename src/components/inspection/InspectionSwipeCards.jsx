@@ -122,8 +122,8 @@ const InspectionSwipeCards = ({ onComplete }) => {
 
    setIsSubmitting(true);
    try {
-     // Just pass the inspection results array without the name
-     await submitInspection(inspectionResults);
+     // Just pass the inspector name
+     await submitInspection(inspectionResults, inspectorName);
 
      // Trigger confetti animation
      triggerConfetti();
@@ -131,7 +131,7 @@ const InspectionSwipeCards = ({ onComplete }) => {
      showNotification("Report submitted successfully! 👍", "success");
      setShowSubmitModal(false);
 
-     // Reset and redirect with delay to show confetti
+     // Reset and navigate with delay
      setTimeout(() => {
        setInspectionItems([...inspectionData].sort((a, b) => a.id - b.id));
        setInspectionResults([]);
