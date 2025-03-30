@@ -1,4 +1,4 @@
-// components/inspection/InspectionSwipeCards.jsx - Main component with modern design
+// components/inspection/InspectionSwipeCards.jsx
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -14,13 +14,21 @@ import InspectionComplete from "./InspectionComplete";
 import SubmissionModal from "./SubmissionModal";
 import { inspectionData } from "./inspectionData";
 
-// Import custom hook
-import useInspections from "@/hooks/useInspections";
+// Import analytics service
+import {
+  logInspectionStarted,
+  logInspectionCompleted,
+  logInspectionSubmitted,
+  logCustomEvent,
+} from "@/services/analytics";
 
-const InspectionSwipeCards = ({ onComplete }) => {
+// Import Firebase services
+import { submitInspection } from "@/services/inspections/inspectionService";
+
+const InspectionSwipeCards = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const inspectorName = location.state?.inspectorName || "Unknown";
+  const inspectorName = location.state?.inspectorName || "Anonymous Inspector";
 
   const [inspectionItems, setInspectionItems] = useState([]);
   const [currentItem, setCurrentItem] = useState(null);
@@ -36,18 +44,17 @@ const InspectionSwipeCards = ({ onComplete }) => {
   const [showModal, setShowModal] = useState(false);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [notification, setNotification] = useState(null);
-
-  // Get the inspection hook
-  const { submitInspection, loading: submissionLoading } = useInspections({
-    autoFetch: false,
-  });
+  const [submissionError, setSubmissionError] = useState(null);
 
   // Initialize inspection data
   useEffect(() => {
     // Sort by ID to ensure items are in correct order
     const sortedItems = [...inspectionData].sort((a, b) => a.id - b.id);
     setInspectionItems(sortedItems);
-  }, []);
+
+    // Log inspection started event
+    logInspectionStarted(inspectorName);
+  }, [inspectorName]);
 
   // Calculate stats for display
   const stats = useMemo(() => {
@@ -77,8 +84,22 @@ const InspectionSwipeCards = ({ onComplete }) => {
     if (stats.completed === stats.total && stats.total > 0) {
       setIsCompleted(true);
       showNotification("Inspection complete! 🎉", "success");
+
+      // Log inspection completed event with stats
+      logInspectionCompleted({
+        total_items: stats.total,
+        pass_count: stats.passCount,
+        fail_count: stats.failCount,
+        pass_rate: stats.passRate,
+      });
     }
-  }, [stats.completed, stats.total]);
+  }, [
+    stats.completed,
+    stats.total,
+    stats.passCount,
+    stats.failCount,
+    stats.passRate,
+  ]);
 
   // Custom notification function
   const showNotification = (message, type = "info") => {
@@ -115,44 +136,60 @@ const InspectionSwipeCards = ({ onComplete }) => {
     }, 400);
   };
 
-  // Submit all inspection results to Firebase
-  // In components/inspection/InspectionSwipeCards.jsx
- const handleSubmitInspection = async () => {
-   if (isSubmitting) return;
+  // Submit inspection results to Firebase
+  const handleSubmitInspection = async () => {
+    if (isSubmitting) return;
 
-   setIsSubmitting(true);
-   try {
-     // Just pass the inspector name
-     await submitInspection(inspectionResults, inspectorName);
+    setIsSubmitting(true);
+    setSubmissionError(null);
 
-     // Trigger confetti animation
-     triggerConfetti();
+    try {
+      // Submit to Firebase
+      const inspectionId = await submitInspection(
+        inspectionResults,
+        inspectorName
+      );
 
-     showNotification("Report submitted successfully! 👍", "success");
-     setShowSubmitModal(false);
+      // Log analytics event
+      logInspectionSubmitted(inspectionId, {
+        total_items: stats.total,
+        pass_count: stats.passCount,
+        fail_count: stats.failCount,
+        pass_rate: stats.passRate,
+        inspector_name: inspectorName,
+      });
 
-     // Reset and navigate with delay
-     setTimeout(() => {
-       setInspectionItems([...inspectionData].sort((a, b) => a.id - b.id));
-       setInspectionResults([]);
-       setIsCompleted(false);
-       setActiveIndex(0);
-       setViewMode("inspection");
+      // Trigger confetti animation
+      triggerConfetti();
 
-       navigate("/");
-     }, 2000);
-   } catch (error) {
-     console.error("Error submitting report:", error);
-     showNotification("Error submitting report. Please try again.", "error");
-     setShowSubmitModal(false);
-   } finally {
-     setIsSubmitting(false);
-   }
- };
+      showNotification("Report submitted successfully! 👍", "success");
+      setShowSubmitModal(false);
+
+      // Reset and navigate with delay
+      setTimeout(() => {
+        setInspectionItems([...inspectionData].sort((a, b) => a.id - b.id));
+        setInspectionResults([]);
+        setIsCompleted(false);
+        setActiveIndex(0);
+        setViewMode("inspection");
+
+        navigate("/");
+      }, 2000);
+    } catch (error) {
+      console.error("Error submitting report:", error);
+      setSubmissionError(
+        error.message || "Failed to submit report. Please try again."
+      );
+      showNotification("Error submitting report. Please try again.", "error");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   // Open submission modal
   const handleOpenSubmitModal = () => {
     setShowSubmitModal(true);
+    setSubmissionError(null);
   };
 
   // Start a new inspection (reset everything)
@@ -163,6 +200,9 @@ const InspectionSwipeCards = ({ onComplete }) => {
     setActiveIndex(0);
     setViewMode("inspection");
     showNotification("Started new inspection 🚀", "info");
+
+    // Log analytics event
+    logInspectionStarted(inspectorName);
   };
 
   // Handle the swipe left (fail) action
@@ -173,6 +213,12 @@ const InspectionSwipeCards = ({ onComplete }) => {
     setShowModal(true);
     setFailReason("");
     setFailReasonError("");
+
+    // Log analytics event
+    logCustomEvent("inspection_item_failed_swipe", {
+      item_id: item.id,
+      item_description: item.description,
+    });
   }, []);
 
   // Handle the swipe right (pass) action
@@ -190,6 +236,12 @@ const InspectionSwipeCards = ({ onComplete }) => {
     removeItemFromQueue(item.id);
     showNotification("Item passed! ✅", "success");
 
+    // Log analytics event
+    logCustomEvent("inspection_item_passed", {
+      item_id: item.id,
+      item_description: item.description,
+    });
+
     setProcessingCard(false);
   }, []);
 
@@ -198,8 +250,20 @@ const InspectionSwipeCards = ({ onComplete }) => {
     (action, item) => {
       if (action === "pass") {
         handlePass(item);
+
+        // Log analytics event
+        logCustomEvent("inspection_item_passed_button", {
+          item_id: item.id,
+          item_description: item.description,
+        });
       } else if (action === "fail") {
         handleFail(item);
+
+        // Log analytics event
+        logCustomEvent("inspection_item_failed_button", {
+          item_id: item.id,
+          item_description: item.description,
+        });
       }
     },
     [handleFail, handlePass]
@@ -233,6 +297,14 @@ const InspectionSwipeCards = ({ onComplete }) => {
     setShowModal(false);
     removeItemFromQueue(currentItem.id);
     showNotification("Issue noted ✓", "warning");
+
+    // Log analytics event with fail reason
+    logCustomEvent("inspection_item_failed_details", {
+      item_id: currentItem.id,
+      item_description: currentItem.description,
+      fail_reason: failReason,
+    });
+
     setProcessingCard(false);
   }, [currentItem, failReason, removeItemFromQueue]);
 
@@ -248,6 +320,11 @@ const InspectionSwipeCards = ({ onComplete }) => {
   const handleUpdateResults = (updatedResults) => {
     setInspectionResults(updatedResults);
     showNotification("Inspection item updated", "success");
+
+    // Log analytics event
+    logCustomEvent("inspection_item_updated", {
+      item_count: updatedResults.length,
+    });
   };
 
   // Toggle between views
@@ -425,6 +502,7 @@ const InspectionSwipeCards = ({ onComplete }) => {
             onSubmit={handleSubmitInspection}
             onCancel={() => setShowSubmitModal(false)}
             isSubmitting={isSubmitting}
+            error={submissionError}
           />
         )}
       </AnimatePresence>

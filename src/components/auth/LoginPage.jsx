@@ -4,10 +4,16 @@ import { useNavigate } from "react-router-dom";
 import { loginUser, onAuthStateChange } from "@/services/auth";
 import {
   logUserSignIn,
-  ANALYTICS_EVENTS,
   logCustomEvent,
+  ANALYTICS_EVENTS,
 } from "@/services/analytics";
-import { ClipboardCheck, Coffee, Lock, ArrowLeft } from "lucide-react";
+import {
+  ClipboardCheck,
+  Coffee,
+  Lock,
+  ArrowLeft,
+  AlertCircle,
+} from "lucide-react";
 import {
   useMotionTemplate,
   useMotionValue,
@@ -58,14 +64,41 @@ const LoginPage = () => {
     try {
       await loginUser(email, password);
       await logUserSignIn("email"); // Log analytics event
-      navigate("/dashboard");
-    } catch (error) {
-      logCustomEvent(ANALYTICS_EVENTS.ERROR_OCCURRED, {
-        error_type: "login_error",
-        error_message: error.message,
+
+      // Log additional event details
+      logCustomEvent(ANALYTICS_EVENTS.USER_SIGN_IN, {
+        method: "email",
+        email_domain: email.split("@")[1],
+        timestamp: new Date().toISOString(),
       });
 
-      setError("Invalid email or password. Please try again.");
+      navigate("/dashboard");
+    } catch (error) {
+      // Handle specific Firebase auth errors with user-friendly messages
+      let errorMessage = "Invalid email or password. Please try again.";
+
+      if (error.code === "auth/user-not-found") {
+        errorMessage =
+          "No account found with this email. Please check your email address.";
+      } else if (error.code === "auth/wrong-password") {
+        errorMessage =
+          "Incorrect password. Please try again or reset your password.";
+      } else if (error.code === "auth/too-many-requests") {
+        errorMessage =
+          "Access temporarily disabled due to many failed login attempts. Please try again later.";
+      } else if (error.code === "auth/network-request-failed") {
+        errorMessage =
+          "Network error. Please check your internet connection and try again.";
+      }
+
+      setError(errorMessage);
+
+      // Log error event
+      logCustomEvent(ANALYTICS_EVENTS.ERROR_OCCURRED, {
+        error_type: "login_error",
+        error_code: error.code,
+        error_message: error.message,
+      });
     } finally {
       setLoading(false);
     }
@@ -95,8 +128,9 @@ const LoginPage = () => {
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {error && (
-            <div className="p-3 bg-red-900/30 border border-red-500/30 text-red-300 rounded-lg text-sm">
-              {error}
+            <div className="p-3 bg-red-900/30 border border-red-500/30 rounded-lg flex items-start">
+              <AlertCircle className="w-5 h-5 text-red-400 mr-2 flex-shrink-0 mt-0.5" />
+              <p className="text-red-300 text-sm">{error}</p>
             </div>
           )}
 
@@ -115,6 +149,7 @@ const LoginPage = () => {
               className="w-full p-3 border border-gray-700 bg-gray-800/60 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-white"
               placeholder="admin@company.com"
               required
+              disabled={loading}
             />
           </div>
 
@@ -134,6 +169,7 @@ const LoginPage = () => {
                 className="w-full p-3 border border-gray-700 bg-gray-800/60 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-white"
                 placeholder="••••••••"
                 required
+                disabled={loading}
               />
               <Lock className="absolute right-3 top-3 h-5 w-5 text-gray-500" />
             </div>

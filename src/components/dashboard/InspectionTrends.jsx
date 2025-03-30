@@ -1,7 +1,7 @@
-// components/dashboard/InspectionTrends.jsx - Updated version
+// components/dashboard/InspectionTrends.jsx
 import React, { useState, useEffect } from "react";
 import { getInspectionTrendsData } from "@/services/inspections/inspectionService";
-import { BarChart2, Calendar, RefreshCcw } from "lucide-react";
+import { BarChart2, Calendar, RefreshCw, AlertCircle } from "lucide-react";
 import {
   LineChart,
   Line,
@@ -18,12 +18,15 @@ import {
 const InspectionTrends = ({ storeId, dateRange }) => {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [chartType, setChartType] = useState("line"); // 'line' or 'bar'
   const [timeGrouping, setTimeGrouping] = useState("day"); // 'day', 'week', 'month'
 
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
+      setError(null);
+
       try {
         const trendsData = await getInspectionTrendsData(
           storeId,
@@ -33,6 +36,7 @@ const InspectionTrends = ({ storeId, dateRange }) => {
         setData(trendsData);
       } catch (error) {
         console.error("Error fetching inspection trends:", error);
+        setError("Failed to load trend data");
       } finally {
         setLoading(false);
       }
@@ -41,19 +45,41 @@ const InspectionTrends = ({ storeId, dateRange }) => {
     fetchData();
   }, [storeId, dateRange, timeGrouping]);
 
+  const handleRetry = () => {
+    setError(null);
+    setLoading(true);
+    // The useEffect will trigger a refetch
+  };
+
   const renderChart = () => {
+    if (error) {
+      return (
+        <div className="flex flex-col items-center justify-center h-64">
+          <AlertCircle className="h-10 w-10 text-red-400 mb-3" />
+          <p className="text-red-300 text-lg font-medium mb-1">{error}</p>
+          <button
+            onClick={handleRetry}
+            className="mt-3 px-4 py-2 bg-gray-700 text-gray-300 rounded-lg hover:bg-gray-600 flex items-center"
+          >
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Retry
+          </button>
+        </div>
+      );
+    }
+
     if (loading) {
       return (
         <div className="flex items-center justify-center h-64">
           <div className="text-center">
-            <RefreshCcw className="h-8 w-8 text-blue-400 mx-auto mb-3 animate-spin" />
+            <RefreshCw className="h-8 w-8 text-blue-400 mx-auto mb-3 animate-spin" />
             <p className="text-gray-400">Loading chart data...</p>
           </div>
         </div>
       );
     }
 
-    if (data.length === 0) {
+    if (!data || data.length === 0) {
       return (
         <div className="flex items-center justify-center h-64">
           <div className="text-center">
@@ -66,48 +92,70 @@ const InspectionTrends = ({ storeId, dateRange }) => {
       );
     }
 
+    const CustomTooltip = ({ active, payload, label }) => {
+      if (active && payload && payload.length) {
+        return (
+          <div className="bg-gray-800 p-3 border border-gray-700 rounded shadow-lg">
+            <p className="text-gray-200 font-medium">{label}</p>
+            <div className="mt-2">
+              {payload.map((entry, index) => (
+                <div key={index} className="flex items-center py-1">
+                  <div
+                    className="w-3 h-3 rounded-full mr-2"
+                    style={{ backgroundColor: entry.color }}
+                  ></div>
+                  <span className="text-gray-300 text-sm">
+                    {entry.name}: {entry.value}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      }
+      return null;
+    };
+
     if (chartType === "line") {
       return (
         <ResponsiveContainer width="100%" height={300}>
           <LineChart data={data}>
             <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-            <XAxis dataKey="date" stroke="#9CA3AF" tick={{ fontSize: 12 }} />
-            <YAxis stroke="#9CA3AF" tick={{ fontSize: 12 }} />
-            <Tooltip
-              contentStyle={{
-                backgroundColor: "#1F2937",
-                borderColor: "#374151",
-                color: "#E5E7EB",
-              }}
-              labelStyle={{ color: "#E5E7EB" }}
+            <XAxis
+              dataKey="date"
+              stroke="#9CA3AF"
+              tick={{ fontSize: 12 }}
+              tickMargin={5}
             />
-            <Legend />
+            <YAxis stroke="#9CA3AF" tick={{ fontSize: 12 }} />
+            <Tooltip content={<CustomTooltip />} />
+            <Legend iconType="circle" wrapperStyle={{ paddingTop: 10 }} />
             <Line
               type="monotone"
               dataKey="satisfactoryItems"
+              name="Satisfactory"
               stroke="#10B981"
               strokeWidth={2}
-              dot={{ r: 4 }}
+              dot={{ r: 4, strokeWidth: 2 }}
               activeDot={{ r: 6 }}
-              name="Satisfactory"
             />
             <Line
               type="monotone"
               dataKey="issueItems"
+              name="Issues"
               stroke="#F59E0B"
               strokeWidth={2}
-              dot={{ r: 4 }}
+              dot={{ r: 4, strokeWidth: 2 }}
               activeDot={{ r: 6 }}
-              name="Issues"
             />
             <Line
               type="monotone"
               dataKey="total"
+              name="Total Items"
               stroke="#3B82F6"
               strokeWidth={2}
-              dot={{ r: 4 }}
+              dot={{ r: 4, strokeWidth: 2 }}
               activeDot={{ r: 6 }}
-              name="Total Items"
             />
           </LineChart>
         </ResponsiveContainer>
@@ -117,23 +165,27 @@ const InspectionTrends = ({ storeId, dateRange }) => {
         <ResponsiveContainer width="100%" height={300}>
           <BarChart data={data}>
             <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-            <XAxis dataKey="date" stroke="#9CA3AF" tick={{ fontSize: 12 }} />
-            <YAxis stroke="#9CA3AF" tick={{ fontSize: 12 }} />
-            <Tooltip
-              contentStyle={{
-                backgroundColor: "#1F2937",
-                borderColor: "#374151",
-                color: "#E5E7EB",
-              }}
-              labelStyle={{ color: "#E5E7EB" }}
+            <XAxis
+              dataKey="date"
+              stroke="#9CA3AF"
+              tick={{ fontSize: 12 }}
+              tickMargin={5}
             />
-            <Legend />
+            <YAxis stroke="#9CA3AF" tick={{ fontSize: 12 }} />
+            <Tooltip content={<CustomTooltip />} />
+            <Legend iconType="circle" wrapperStyle={{ paddingTop: 10 }} />
             <Bar
               dataKey="satisfactoryItems"
-              fill="#10B981"
               name="Satisfactory"
+              fill="#10B981"
+              radius={[4, 4, 0, 0]}
             />
-            <Bar dataKey="issueItems" fill="#F59E0B" name="Issues" />
+            <Bar
+              dataKey="issueItems"
+              name="Issues"
+              fill="#F59E0B"
+              radius={[4, 4, 0, 0]}
+            />
           </BarChart>
         </ResponsiveContainer>
       );

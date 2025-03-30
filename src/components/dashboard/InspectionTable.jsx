@@ -8,6 +8,8 @@ import {
   ChevronRight,
   AlertCircle,
   CheckCircle,
+  FileText,
+  RefreshCw,
 } from "lucide-react";
 
 const InspectionTable = ({
@@ -19,6 +21,7 @@ const InspectionTable = ({
 }) => {
   const [inspections, setInspections] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [sortField, setSortField] = useState("timestamp");
@@ -28,6 +31,8 @@ const InspectionTable = ({
   useEffect(() => {
     const fetchInspections = async () => {
       setLoading(true);
+      setError(null);
+
       try {
         const { data, total } = await getInspections({
           storeId,
@@ -44,6 +49,7 @@ const InspectionTable = ({
         setTotalPages(Math.ceil(total / itemsPerPage));
       } catch (error) {
         console.error("Error fetching inspections:", error);
+        setError("Failed to load inspections");
       } finally {
         setLoading(false);
       }
@@ -59,6 +65,9 @@ const InspectionTable = ({
       setSortField(field);
       setSortDirection("asc");
     }
+
+    // Reset to first page when sorting changes
+    setCurrentPage(1);
   };
 
   const formatDate = (timestamp) => {
@@ -95,6 +104,31 @@ const InspectionTable = ({
 
     return <span className="ml-1">{sortDirection === "asc" ? "↑" : "↓"}</span>;
   };
+
+  const retryFetch = () => {
+    setCurrentPage(1);
+    setInspections([]);
+    setError(null);
+  };
+
+  if (error) {
+    return (
+      <div className="py-12 text-center">
+        <AlertCircle className="h-12 w-12 text-red-400 mx-auto mb-3" />
+        <p className="text-red-300 text-lg font-medium mb-2">{error}</p>
+        <p className="text-gray-400 mb-4">
+          There was an error loading the inspection data.
+        </p>
+        <button
+          onClick={retryFetch}
+          className="flex items-center justify-center px-4 py-2 mx-auto bg-gray-700 hover:bg-gray-600 text-gray-200 rounded-lg transition-colors"
+        >
+          <RefreshCw className="h-4 w-4 mr-2" />
+          Retry
+        </button>
+      </div>
+    );
+  }
 
   if (loading && inspections.length === 0) {
     return (
@@ -189,7 +223,13 @@ const InspectionTable = ({
             ) : (
               <tr>
                 <td colSpan="5" className="p-8 text-center text-gray-400">
-                  No inspection data found matching your criteria.
+                  <FileText className="h-10 w-10 mx-auto mb-2 text-gray-500" />
+                  <p className="text-lg font-medium mb-1">
+                    No inspections found
+                  </p>
+                  <p className="text-sm">
+                    No inspection data found matching your criteria.
+                  </p>
                 </td>
               </tr>
             )}

@@ -1,9 +1,9 @@
 // components/inspection/SubmissionModal.jsx
 import React from "react";
 import { motion } from "framer-motion";
-import { Send, X, CheckCircle } from "lucide-react";
+import { Send, X, CheckCircle, AlertCircle } from "lucide-react";
 
-const SubmissionModal = ({ onSubmit, onCancel, isSubmitting }) => {
+const SubmissionModal = ({ onSubmit, onCancel, isSubmitting, error }) => {
   return (
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-3">
       <motion.div
@@ -21,14 +21,22 @@ const SubmissionModal = ({ onSubmit, onCancel, isSubmitting }) => {
         <h3 className="text-xl font-bold text-white text-center mb-2">
           Inspection Complete!
         </h3>
-        <p className="text-gray-300 text-center mb-6">
+        <p className="text-gray-300 text-center mb-4">
           You've completed all items. Are you ready to submit your inspection?
         </p>
+
+        {error && (
+          <div className="mb-4 p-3 bg-red-900/30 border border-red-500/30 rounded-lg flex items-start">
+            <AlertCircle className="h-5 w-5 text-red-400 mr-2 flex-shrink-0 mt-0.5" />
+            <p className="text-red-300 text-sm">{error}</p>
+          </div>
+        )}
 
         <div className="flex justify-center space-x-4">
           <button
             onClick={onCancel}
             className="px-4 py-2 bg-gray-800 text-gray-300 rounded-lg hover:bg-gray-700 transition-colors border border-gray-700 flex items-center"
+            disabled={isSubmitting}
           >
             <X className="h-4 w-4 mr-2" />
             Cancel

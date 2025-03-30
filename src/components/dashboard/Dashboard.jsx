@@ -15,6 +15,8 @@ import {
   Search,
   Trash2,
   Edit,
+    AlertCircle,
+  CheckCircle
 } from "lucide-react";
 
 // Import dashboard components
@@ -27,6 +29,16 @@ import CommonIssuesChart from "./CommonIssuesChart";
 import StorePerformance from "./StorePerformance";
 import DateRangePicker from "./DateRangePicker";
 
+// Import Firebase services
+import {
+  getInspections,
+  getStores,
+  getInspectionsStats,
+  getInspectionTrendsData,
+  getCommonIssues,
+  getStorePerformance,
+} from "@/services/inspections/inspectionService";
+
 const Dashboard = () => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -36,8 +48,19 @@ const Dashboard = () => {
   const [selectedInspection, setSelectedInspection] = useState(null);
   const [dateRange, setDateRange] = useState({ start: null, end: null });
   const [searchQuery, setSearchQuery] = useState("");
+  const [error, setError] = useState(null);
+  const [notification, setNotification] = useState(null);
 
   const navigate = useNavigate();
+
+  // Custom notification function
+  const showNotification = (message, type = "info") => {
+    setNotification({ message, type });
+    // Auto-dismiss after 3 seconds
+    setTimeout(() => {
+      setNotification(null);
+    }, 3000);
+  };
 
   useEffect(() => {
     // Log page view
@@ -51,13 +74,14 @@ const Dashboard = () => {
     }
 
     setUser(currentUser);
-    setLoading(false);
 
     // Set default date range to last 30 days
     const end = new Date();
     const start = new Date();
     start.setDate(start.getDate() - 30);
     setDateRange({ start, end });
+
+    setLoading(false);
   }, [navigate]);
 
   const handleLogout = async () => {
@@ -67,6 +91,7 @@ const Dashboard = () => {
       navigate("/login");
     } catch (error) {
       console.error("Logout error:", error);
+      setError("Failed to log out. Please try again.");
     }
   };
 
@@ -83,14 +108,24 @@ const Dashboard = () => {
     logCustomEvent("inspection_selected", { inspection_id: inspection.id });
   };
 
-  const handleInspectionDelete = (inspectionId) => {
-    // Add your delete logic here
-    console.log("Delete inspection:", inspectionId);
-    // Reset selected inspection if the deleted one was selected
-    if (selectedInspection && selectedInspection.id === inspectionId) {
-      setSelectedInspection(null);
+  const handleInspectionDelete = async (inspectionId) => {
+    try {
+      // In a real app, you would call a service to delete the inspection
+      // await deleteInspection(inspectionId);
+
+      // For now, we'll just log the deletion
+      console.log("Delete inspection:", inspectionId);
+
+      // Reset selected inspection if the deleted one was selected
+      if (selectedInspection && selectedInspection.id === inspectionId) {
+        setSelectedInspection(null);
+      }
+
+      logCustomEvent("inspection_deleted", { inspection_id: inspectionId });
+    } catch (error) {
+      console.error("Error deleting inspection:", error);
+      setError("Failed to delete inspection. Please try again.");
     }
-    logCustomEvent("inspection_deleted", { inspection_id: inspectionId });
   };
 
   const handleDateRangeChange = (range) => {
@@ -104,6 +139,10 @@ const Dashboard = () => {
   const handleSearch = (query) => {
     setSearchQuery(query);
     logCustomEvent("inspection_search", { query });
+  };
+
+  const clearError = () => {
+    setError(null);
   };
 
   if (loading) {
@@ -164,9 +203,9 @@ const Dashboard = () => {
           <div className="hidden md:flex items-center space-x-4">
             <div className="text-gray-300 flex items-center">
               <div className="w-8 h-8 bg-blue-900/50 border border-blue-500/30 rounded-full flex items-center justify-center mr-2">
-                {user.email.charAt(0).toUpperCase()}
+                {user?.email?.charAt(0).toUpperCase() || "A"}
               </div>
-              <span>{user.email}</span>
+              <span>{user?.email || "Admin User"}</span>
             </div>
             <button
               onClick={handleLogout}
@@ -186,9 +225,9 @@ const Dashboard = () => {
             <div className="flex items-center justify-between py-2 border-b border-gray-700/50">
               <div className="text-gray-300 flex items-center">
                 <div className="w-8 h-8 bg-blue-900/50 border border-blue-500/30 rounded-full flex items-center justify-center mr-2">
-                  {user.email.charAt(0).toUpperCase()}
+                  {user?.email?.charAt(0).toUpperCase() || "A"}
                 </div>
-                <span className="text-sm">{user.email}</span>
+                <span className="text-sm">{user?.email || "Admin User"}</span>
               </div>
             </div>
             <button
@@ -199,6 +238,50 @@ const Dashboard = () => {
               Logout
             </button>
           </div>
+        </div>
+      )}
+
+      {/* Error notification */}
+      {error && (
+        <div className="container mx-auto px-4 py-2">
+          <div className="bg-red-900/30 border border-red-500/30 rounded-lg p-3 flex items-start">
+            <AlertCircle className="h-5 w-5 text-red-400 mr-2 flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="text-red-300 text-sm">{error}</p>
+            </div>
+            <button
+              onClick={clearError}
+              className="text-gray-400 hover:text-gray-300"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Toast notification system */}
+      {notification && (
+        <div
+          className={`fixed left-1/2 bottom-6 transform -translate-x-1/2 z-50 px-4 py-2 rounded-lg shadow-lg text-white text-sm flex items-center ${
+            notification.type === "success"
+              ? "bg-gradient-to-r from-emerald-500 to-emerald-600 border border-emerald-300"
+              : notification.type === "error"
+              ? "bg-gradient-to-r from-red-500 to-red-600 border border-red-300"
+              : notification.type === "warning"
+              ? "bg-gradient-to-r from-amber-500 to-amber-600 border border-amber-300"
+              : "bg-gradient-to-r from-blue-500 to-blue-600 border border-blue-300"
+          }`}
+        >
+          {notification.type === "success" && (
+            <CheckCircle className="w-4 h-4 mr-2" />
+          )}
+          {notification.type === "error" && (
+            <AlertCircle className="w-4 h-4 mr-2" />
+          )}
+          {notification.type === "warning" && (
+            <AlertCircle className="w-4 h-4 mr-2" />
+          )}
+          {notification.message}
         </div>
       )}
 
@@ -337,11 +420,12 @@ const Dashboard = () => {
                 <label className="block text-sm font-medium text-gray-300 mb-1">
                   Default Date Range
                 </label>
-                <select className="w-full py-2 px-3 bg-gray-800/60 border border-gray-700/50 rounded-lg text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                <select
+                  defaultValue="30"
+                  className="w-full py-2 px-3 bg-gray-800/60 border border-gray-700/50 rounded-lg text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
                   <option value="7">Last 7 days</option>
-                  <option value="30" selected>
-                    Last 30 days
-                  </option>
+                  <option value="30">Last 30 days</option>
                   <option value="90">Last 90 days</option>
                 </select>
               </div>
@@ -350,17 +434,25 @@ const Dashboard = () => {
                 <label className="block text-sm font-medium text-gray-300 mb-1">
                   Items Per Page
                 </label>
-                <select className="w-full py-2 px-3 bg-gray-800/60 border border-gray-700/50 rounded-lg text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                <select
+                  defaultValue="25"
+                  className="w-full py-2 px-3 bg-gray-800/60 border border-gray-700/50 rounded-lg text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
                   <option value="10">10</option>
-                  <option value="25" selected>
-                    25
-                  </option>
+                  <option value="25">25</option>
                   <option value="50">50</option>
                   <option value="100">100</option>
                 </select>
               </div>
 
-              <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors mt-4">
+              <button
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors mt-4"
+                onClick={() => {
+                  // In a real app, save settings
+                  console.log("Settings saved");
+                  showNotification("Settings saved successfully", "success");
+                }}
+              >
                 Save Settings
               </button>
             </div>
