@@ -113,21 +113,26 @@ export const logError = (errorType, errorMessage, errorParams = {}) => {
   });
 };
 
+// Updated analytics functions to include store information
+
 /**
  * Log when an inspection is started
  * @param {string} inspectorName Name of the inspector
+ * @param {Object} storeInfo Store information including storeId and storeName
  * @returns {Promise<void>}
  */
-export const logInspectionStarted = (inspectorName) => {
+export const logInspectionStarted = (inspectorName, storeInfo = {}) => {
   return safeLogEvent(ANALYTICS_EVENTS.INSPECTION_STARTED, {
     inspector_name: inspectorName,
+    store_id: storeInfo.storeId || null,
+    store_name: storeInfo.storeName || 'Unknown Store',
     timestamp: new Date().toISOString(),
   });
 };
 
 /**
  * Log when an inspection is completed
- * @param {Object} stats Inspection statistics
+ * @param {Object} stats Inspection statistics and store information
  * @returns {Promise<void>}
  */
 export const logInspectionCompleted = (stats) => {
@@ -140,7 +145,7 @@ export const logInspectionCompleted = (stats) => {
 /**
  * Log when an inspection is submitted to the server
  * @param {string} inspectionId ID of the submitted inspection
- * @param {Object} stats Inspection statistics
+ * @param {Object} stats Inspection statistics and store information
  * @returns {Promise<void>}
  */
 export const logInspectionSubmitted = (inspectionId, stats) => {

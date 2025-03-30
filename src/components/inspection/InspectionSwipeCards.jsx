@@ -1,4 +1,4 @@
-// components/inspection/InspectionSwipeCards.jsx
+// components/inspection/InspectionSwipeCards.jsx - Updated to include store information
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -28,7 +28,18 @@ import { submitInspection } from "@/services/inspections/inspectionService";
 const InspectionSwipeCards = () => {
   const location = useLocation();
   const navigate = useNavigate();
+
+  // Get inspector name and store information from location state
   const inspectorName = location.state?.inspectorName || "Anonymous Inspector";
+  const storeId = location.state?.storeId || null;
+  const storeName = location.state?.storeName || "Unknown Store";
+
+  // Redirect if essential information is missing
+  useEffect(() => {
+    if (!inspectorName || !storeId) {
+      navigate("/");
+    }
+  }, [inspectorName, storeId, navigate]);
 
   const [inspectionItems, setInspectionItems] = useState([]);
   const [currentItem, setCurrentItem] = useState(null);
@@ -53,9 +64,12 @@ const InspectionSwipeCards = () => {
     const sortedItems = [...inspectionData].sort((a, b) => a.id - b.id);
     setInspectionItems(sortedItems);
 
-    // Log inspection started event
-    logInspectionStarted(inspectorName);
-  }, [inspectorName]);
+    // Log inspection started event with store information
+    logInspectionStarted(inspectorName, {
+      storeId,
+      storeName,
+    });
+  }, [inspectorName, storeId, storeName]);
 
   // Calculate stats for display
   const stats = useMemo(() => {
@@ -92,6 +106,8 @@ const InspectionSwipeCards = () => {
         pass_count: stats.passCount,
         fail_count: stats.failCount,
         pass_rate: stats.passRate,
+        storeId,
+        storeName,
       });
     }
   }, [
@@ -100,6 +116,8 @@ const InspectionSwipeCards = () => {
     stats.passCount,
     stats.failCount,
     stats.passRate,
+    storeId,
+    storeName,
   ]);
 
   // Custom notification function
@@ -145,10 +163,12 @@ const InspectionSwipeCards = () => {
     setSubmissionError(null);
 
     try {
-      // Submit to Firebase
+      // Submit to Firebase with store information
       const inspectionId = await submitInspection(
         inspectionResults,
-        inspectorName
+        inspectorName,
+        storeId,
+        storeName
       );
 
       // Log analytics event
@@ -158,6 +178,8 @@ const InspectionSwipeCards = () => {
         fail_count: stats.failCount,
         pass_rate: stats.passRate,
         inspector_name: inspectorName,
+        store_id: storeId,
+        store_name: storeName,
       });
 
       // Trigger confetti animation
@@ -203,49 +225,62 @@ const InspectionSwipeCards = () => {
     showNotification("Started new inspection 🚀", "info");
 
     // Log analytics event
-    logInspectionStarted(inspectorName);
+    logInspectionStarted(inspectorName, {
+      storeId,
+      storeName,
+    });
   };
 
   // Handle the swipe left (fail) action
-  const handleFail = useCallback((item) => {
-    // Save the item before opening modal
-    setCurrentItem({ ...item });
-    setProcessingCard(true);
-    setShowModal(true);
-    setFailReason("");
-    setFailReasonError("");
-    setIsFixed(false); // Reset fixed state
+  const handleFail = useCallback(
+    (item) => {
+      // Save the item before opening modal
+      setCurrentItem({ ...item });
+      setProcessingCard(true);
+      setShowModal(true);
+      setFailReason("");
+      setFailReasonError("");
+      setIsFixed(false); // Reset fixed state
 
-    // Log analytics event
-    logCustomEvent("inspection_item_failed_swipe", {
-      item_id: item.id,
-      item_description: item.description,
-    });
-  }, []);
+      // Log analytics event
+      logCustomEvent("inspection_item_failed_swipe", {
+        item_id: item.id,
+        item_description: item.description,
+        store_id: storeId,
+        store_name: storeName,
+      });
+    },
+    [storeId, storeName]
+  );
 
   // Handle the swipe right (pass) action
-  const handlePass = useCallback((item) => {
-    setProcessingCard(true);
+  const handlePass = useCallback(
+    (item) => {
+      setProcessingCard(true);
 
-    const result = {
-      id: item.id,
-      description: item.description,
-      status: "pass",
-      timestamp: new Date().toISOString(),
-    };
+      const result = {
+        id: item.id,
+        description: item.description,
+        status: "pass",
+        timestamp: new Date().toISOString(),
+      };
 
-    setInspectionResults((prev) => [...prev, result]);
-    removeItemFromQueue(item.id);
-    showNotification("Item passed! ✅", "success");
+      setInspectionResults((prev) => [...prev, result]);
+      removeItemFromQueue(item.id);
+      showNotification("Item passed! ✅", "success");
 
-    // Log analytics event
-    logCustomEvent("inspection_item_passed", {
-      item_id: item.id,
-      item_description: item.description,
-    });
+      // Log analytics event
+      logCustomEvent("inspection_item_passed", {
+        item_id: item.id,
+        item_description: item.description,
+        store_id: storeId,
+        store_name: storeName,
+      });
 
-    setProcessingCard(false);
-  }, []);
+      setProcessingCard(false);
+    },
+    [storeId, storeName]
+  );
 
   // Add quick buttons to pass/fail without swiping
   const handleQuickAction = useCallback(
@@ -257,6 +292,8 @@ const InspectionSwipeCards = () => {
         logCustomEvent("inspection_item_passed_button", {
           item_id: item.id,
           item_description: item.description,
+          store_id: storeId,
+          store_name: storeName,
         });
       } else if (action === "fail") {
         handleFail(item);
@@ -265,10 +302,12 @@ const InspectionSwipeCards = () => {
         logCustomEvent("inspection_item_failed_button", {
           item_id: item.id,
           item_description: item.description,
+          store_id: storeId,
+          store_name: storeName,
         });
       }
     },
-    [handleFail, handlePass]
+    [handleFail, handlePass, storeId, storeName]
   );
 
   // Remove item from the queue after action
@@ -314,10 +353,19 @@ const InspectionSwipeCards = () => {
       item_description: currentItem.description,
       fail_reason: failReason,
       is_fixed: isFixed,
+      store_id: storeId,
+      store_name: storeName,
     });
 
     setProcessingCard(false);
-  }, [currentItem, failReason, isFixed, removeItemFromQueue]);
+  }, [
+    currentItem,
+    failReason,
+    isFixed,
+    removeItemFromQueue,
+    storeId,
+    storeName,
+  ]);
 
   // Handle cancel from fail modal - don't remove the item
   const handleCancelFail = () => {
@@ -335,6 +383,8 @@ const InspectionSwipeCards = () => {
     // Log analytics event
     logCustomEvent("inspection_item_updated", {
       item_count: updatedResults.length,
+      store_id: storeId,
+      store_name: storeName,
     });
   };
 
@@ -361,6 +411,15 @@ const InspectionSwipeCards = () => {
 
   return (
     <div className="flex flex-col items-center w-full max-w-md mx-auto relative min-h-[100dvh] bg-gradient-to-b from-gray-900 via-indigo-950 to-purple-950 py-2 px-4">
+      {/* Store indicator */}
+      <div className="w-full bg-indigo-900/30 rounded-lg px-3 py-2 mb-2 flex items-center justify-between border border-indigo-500/30">
+        <div className="flex items-center">
+          <span className="text-sm text-gray-300">Store:</span>
+          <span className="ml-2 text-blue-300 font-medium">{storeName}</span>
+        </div>
+        <div className="text-xs text-gray-400">{inspectorName}</div>
+      </div>
+
       {/* Custom notification system */}
       {notification && (
         <div
@@ -516,6 +575,7 @@ const InspectionSwipeCards = () => {
             onCancel={() => setShowSubmitModal(false)}
             isSubmitting={isSubmitting}
             error={submissionError}
+            storeName={storeName}
           />
         )}
       </AnimatePresence>

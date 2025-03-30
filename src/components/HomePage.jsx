@@ -8,12 +8,14 @@ import {
   animate,
 } from "framer-motion";
 import { ClipboardCheck, ChevronRight, User, Lock } from "lucide-react";
+import StoreSelector from "./inspection/StoreSelector";
 
 const COLORS = ["#3B82F6", "#10B981", "#6366F1", "#8B5CF6"];
 
 const HomePage = () => {
   const navigate = useNavigate();
   const [showInspectionForm, setShowInspectionForm] = useState(false);
+  const [showStoreSelector, setShowStoreSelector] = useState(false);
   const [inspectorName, setInspectorName] = useState("");
   const [formError, setFormError] = useState("");
 
@@ -44,8 +46,9 @@ const HomePage = () => {
       return;
     }
 
-    // Navigate to the inspection page with inspector name as state
-    navigate("/inspection", { state: { inspectorName } });
+    // Instead of navigating directly to inspection, show store selector
+    setShowInspectionForm(false);
+    setShowStoreSelector(true);
   };
 
   const handleAdminLogin = () => {
@@ -88,7 +91,7 @@ const HomePage = () => {
           locations with our easy-to-use inspection tool.
         </motion.p>
 
-        {!showInspectionForm ? (
+        {!showInspectionForm && !showStoreSelector ? (
           <div className="flex flex-col sm:flex-row gap-4 mt-4">
             <motion.button
               style={{
@@ -128,7 +131,7 @@ const HomePage = () => {
               Admin Login
             </motion.button>
           </div>
-        ) : (
+        ) : showInspectionForm ? (
           <motion.div
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
@@ -181,12 +184,21 @@ const HomePage = () => {
                   }}
                   className="flex-1 px-4 py-2 bg-white/10 rounded-lg text-white font-medium hover:bg-white/20 transition-colors flex items-center justify-center"
                 >
-                  Begin Inspection
+                  Next
                   <ChevronRight className="ml-2 h-4 w-4" />
                 </motion.button>
               </div>
             </form>
           </motion.div>
+        ) : (
+          // Store Selector
+          <StoreSelector
+            inspectorName={inspectorName}
+            onBack={() => {
+              setShowStoreSelector(false);
+              setShowInspectionForm(true);
+            }}
+          />
         )}
       </div>
 

@@ -513,11 +513,23 @@ function getWeekNumber(date) {
 }
 
 // Submit a new inspection
+// Updated submitInspection function for inspectionService.js
 export const submitInspection = async (
   inspectionResults,
-  inspectorName = "Anonymous"
+  inspectorName = "Anonymous",
+  storeId = null,
+  storeName = "Unknown Store"
 ) => {
   try {
+    // Validate required parameters
+    if (!inspectionResults || !Array.isArray(inspectionResults) || inspectionResults.length === 0) {
+      throw new Error("Invalid inspection data");
+    }
+
+    if (!storeId) {
+      throw new Error("Store ID is required for inspection submission");
+    }
+
     // Calculate summary data
     const satisfactoryItems = inspectionResults.filter(
       (item) => item.status === "pass"
@@ -532,13 +544,34 @@ export const submitInspection = async (
 
     // Create inspection document
     const inspectionData = {
+      // Information about who submitted it
       submittedBy: inspectorName,
+
+      // Store information
+      storeId: storeId,
+      storeName: storeName,
+
+      // Admin information if an admin is logged in
+      adminId: null, // Update with getCurrentUser().uid if needed
+      adminEmail: null, // Update with getCurrentUser().email if needed
+      isAdminSubmission: false, // Update based on admin login status
+
+      // Timestamp information
       timestamp: serverTimestamp(),
+      completedAt: new Date().toISOString(),
+
+      // Inspection data
       items: inspectionResults,
       totalItems,
       satisfactoryItems,
       issueItems,
       fixedIssues,
+
+      // Overall status
+      passRate: Math.round((satisfactoryItems / totalItems) * 100),
+      overallStatus: issueItems === 0 ? "pass" : "fail",
+
+      // Device info
       deviceInfo: {
         platform: navigator.platform,
         userAgent: navigator.userAgent,
@@ -547,6 +580,8 @@ export const submitInspection = async (
         screenHeight: window.screen.height,
       },
     };
+
+    console.log("Submitting inspection data:", inspectionData);
 
     // Add to Firestore
     const inspectionsRef = collection(db, "inspections");
