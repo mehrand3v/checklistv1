@@ -117,42 +117,38 @@ const InspectionSwipeCards = ({ onComplete }) => {
 
   // Submit all inspection results to Firebase
   // In components/inspection/InspectionSwipeCards.jsx
-  const handleSubmitInspection = async () => {
-    if (isSubmitting) return;
+ const handleSubmitInspection = async () => {
+   if (isSubmitting) return;
 
-    setIsSubmitting(true);
-    try {
-      // Only send the inspection results array, not an object
-      await submitInspection(inspectionResults, inspectorName);
+   setIsSubmitting(true);
+   try {
+     // Just pass the inspection results array without the name
+     await submitInspection(inspectionResults);
 
-      // Trigger confetti animation on successful submission
-      triggerConfetti();
+     // Trigger confetti animation
+     triggerConfetti();
 
-      showNotification("Report submitted successfully! 👍", "success");
-      setShowSubmitModal(false);
+     showNotification("Report submitted successfully! 👍", "success");
+     setShowSubmitModal(false);
 
-      // Reset form with delay...
-      setTimeout(() => {
-        setInspectionItems([...inspectionData].sort((a, b) => a.id - b.id));
-        setInspectionResults([]);
-        setIsCompleted(false);
-        setActiveIndex(0);
-        setViewMode("inspection");
+     // Reset and redirect with delay to show confetti
+     setTimeout(() => {
+       setInspectionItems([...inspectionData].sort((a, b) => a.id - b.id));
+       setInspectionResults([]);
+       setIsCompleted(false);
+       setActiveIndex(0);
+       setViewMode("inspection");
 
-        navigate("/");
-
-        if (onComplete && typeof onComplete === "function") {
-          onComplete();
-        }
-      }, 2000);
-    } catch (error) {
-      console.error("Error submitting report:", error);
-      showNotification("Error submitting report. Please try again.", "error");
-      setShowSubmitModal(false);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+       navigate("/");
+     }, 2000);
+   } catch (error) {
+     console.error("Error submitting report:", error);
+     showNotification("Error submitting report. Please try again.", "error");
+     setShowSubmitModal(false);
+   } finally {
+     setIsSubmitting(false);
+   }
+ };
 
   // Open submission modal
   const handleOpenSubmitModal = () => {

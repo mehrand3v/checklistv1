@@ -7,11 +7,35 @@ import { motion } from 'framer-motion';
 const InspectionItem = ({ inspection }) => {
   const [expanded, setExpanded] = useState(false);
 
-  const formatDate = (timestamp) => {
-    if (!timestamp) return 'Unknown date';
-    const date = new Date(timestamp);
-    return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
-  };
+ const formatDate = (timestamp) => {
+   if (!timestamp) return "No date";
+
+   try {
+     // Check if timestamp is a Firebase Timestamp
+     if (timestamp && typeof timestamp.toDate === "function") {
+       timestamp = timestamp.toDate();
+     }
+
+     // Handle string dates
+     if (typeof timestamp === "string") {
+       timestamp = new Date(timestamp);
+     }
+
+     // Check if date is valid before formatting
+     if (timestamp instanceof Date && !isNaN(timestamp)) {
+       return timestamp.toLocaleDateString(undefined, {
+         month: "short",
+         day: "numeric",
+         year: "numeric",
+       });
+     } else {
+       return "Invalid date";
+     }
+   } catch (error) {
+     console.error("Error formatting date:", error);
+     return "Date error";
+   }
+ };
 
   const getStatusIcon = (status) => {
     switch (status) {
@@ -100,7 +124,7 @@ const InspectionItem = ({ inspection }) => {
                 </div>
               ))}
           </div>
-          
+
           <div className="mt-3 pt-2 border-t border-gray-100 flex justify-between items-center">
             <div className="text-xs text-gray-500">
               Completed by {inspection.submittedBy || "Unknown"}

@@ -54,16 +54,7 @@ const InspectionHeader = ({
             </button>
           )}
 
-          {/* New Inspection button */}
-          {isCompleted && (
-            <button
-              onClick={onStartNew}
-              className="px-3 py-1.5 bg-green-500/20 hover:bg-green-600/30 text-green-200 rounded-full transition-colors flex items-center text-xs font-medium border border-green-500/30"
-            >
-              <Plus className="w-3.5 h-3.5 mr-1 text-green-300" />
-              New
-            </button>
-          )}
+          
         </div>
       </div>
 

@@ -107,21 +107,6 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-900 to-blue-900">
-      {/* Mobile notice for small screens */}
-      {screenWidth < 768 && (
-        <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 md:hidden">
-          <div className="flex">
-            <div className="flex items-start">
-              <AlertTriangle className="h-5 w-5 text-yellow-600 mr-2 mt-0.5" />
-              <p className="text-sm text-yellow-700">
-                This dashboard is optimized for larger screens. For the best
-                experience, please use a tablet or desktop.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Header */}
       <header className="bg-gray-800/40 backdrop-blur-sm border-b border-gray-700/50 shadow-md">
         <div className="container mx-auto px-4 py-3 flex items-center justify-between">
@@ -187,9 +172,9 @@ const Dashboard = () => {
       )}
 
       {/* Dashboard content */}
-      <div className="container mx-auto px-4 py-6">
+      <div className="container mx-auto px-2 sm:px-4 py-3">
         {/* Store selector */}
-        <div className="mb-6">
+        <div className="mb-4">
           <StoreSelector
             selectedStore={selectedStore}
             onStoreChange={handleStoreChange}
@@ -197,12 +182,12 @@ const Dashboard = () => {
         </div>
 
         {/* Statistics cards */}
-        <div className="mb-6">
+        <div className="mb-4">
           <InspectionStats storeId={selectedStore} />
         </div>
 
         {/* Charts and tables */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
           <div className="lg:col-span-2">
             <InspectionTrends storeId={selectedStore} />
           </div>
