@@ -1,26 +1,26 @@
 // components/inspection/InspectionSwipeCards.jsx - Main component with modern design
 import React, { useState, useEffect, useCallback, useMemo } from "react";
-import { ToastContainer, toast } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, User } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { CheckCircle, XCircle, AlertCircle } from "lucide-react";
+import confetti from "canvas-confetti";
+
 // Import subcomponents
 import InspectionHeader from "./InspectionHeader";
 import InspectionCard from "./InspectionCard";
 import InspectionFailModal from "./InspectionFailModal";
 import InspectionResults from "./InspectionResults";
 import InspectionComplete from "./InspectionComplete";
+import SubmissionModal from "./SubmissionModal";
 import { inspectionData } from "./inspectionData";
-import confetti from "canvas-confetti";
 
 // Import custom hook
 import useInspections from "@/hooks/useInspections";
 
 const InspectionSwipeCards = ({ onComplete }) => {
-    const location = useLocation();
-    const navigate = useNavigate();
-    const inspectorName = location.state?.inspectorName || "Unknown";
+  const location = useLocation();
+  const navigate = useNavigate();
+  const inspectorName = location.state?.inspectorName || "Unknown";
 
   const [inspectionItems, setInspectionItems] = useState([]);
   const [currentItem, setCurrentItem] = useState(null);
@@ -34,42 +34,17 @@ const InspectionSwipeCards = ({ onComplete }) => {
   const [processingCard, setProcessingCard] = useState(false);
   const [selectedResultId, setSelectedResultId] = useState(null);
   const [showModal, setShowModal] = useState(false);
+  const [showSubmitModal, setShowSubmitModal] = useState(false);
+  const [notification, setNotification] = useState(null);
 
   // Get the inspection hook
   const { submitInspection, loading: submissionLoading } = useInspections({
     autoFetch: false,
   });
-const triggerConfetti = () => {
-  // First burst
-  confetti({
-    particleCount: 100,
-    spread: 70,
-    origin: { y: 0.6 },
-  });
-
-  // Second burst after a short delay
-  setTimeout(() => {
-    confetti({
-      particleCount: 50,
-      angle: 60,
-      spread: 55,
-      origin: { x: 0 },
-    });
-  }, 250);
-
-  // Third burst from the opposite side
-  setTimeout(() => {
-    confetti({
-      particleCount: 50,
-      angle: 120,
-      spread: 55,
-      origin: { x: 1 },
-    });
-  }, 400);
-};
 
   // Initialize inspection data
   useEffect(() => {
+    // Sort by ID to ensure items are in correct order
     const sortedItems = [...inspectionData].sort((a, b) => a.id - b.id);
     setInspectionItems(sortedItems);
   }, []);
@@ -101,64 +76,97 @@ const triggerConfetti = () => {
   useEffect(() => {
     if (stats.completed === stats.total && stats.total > 0) {
       setIsCompleted(true);
-      toast.success("Inspection complete! 🎉");
+      showNotification("Inspection complete! 🎉", "success");
     }
   }, [stats.completed, stats.total]);
-const handleUpdateResults = (updatedResults) => {
-  setInspectionResults(updatedResults);
-};
-  // Submit all inspection results to Firebase
-const handleSubmitInspection = async () => {
-  if (isSubmitting) return;
 
-  setIsSubmitting(true);
-  try {
-    // Add inspector name to the inspection data
-    const submissionData = {
-      results: inspectionResults,
-      inspectorName: inspectorName,
-      timestamp: new Date().toISOString(),
-    };
-
-    await submitInspection(submissionData);
-
-    // Trigger confetti animation on successful submission
-    triggerConfetti();
-
-    toast.success("Inspection submitted successfully! 👍");
-
-    // Reset and redirect - add a slight delay to allow confetti to be visible
+  // Custom notification function
+  const showNotification = (message, type = "info") => {
+    setNotification({ message, type });
     setTimeout(() => {
-      setInspectionItems([...inspectionData]);
-      setInspectionResults([]);
-      setIsCompleted(false);
-      setActiveIndex(0);
-      setViewMode("inspection");
-
-      // Navigate back to home page after submission
-      navigate("/");
-
-      // Notify parent component that inspection is complete
-      if (onComplete && typeof onComplete === "function") {
-        onComplete();
-      }
+      setNotification(null);
     }, 2000);
-  } catch (error) {
-    console.error("Error submitting inspection:", error);
-    toast.error("Error submitting inspection. Please try again.");
-  } finally {
-    setIsSubmitting(false);
-  }
-};
+  };
+
+  // Trigger confetti animation
+  const triggerConfetti = () => {
+    confetti({
+      particleCount: 100,
+      spread: 70,
+      origin: { y: 0.6 },
+    });
+
+    setTimeout(() => {
+      confetti({
+        particleCount: 50,
+        angle: 60,
+        spread: 55,
+        origin: { x: 0 },
+      });
+    }, 250);
+
+    setTimeout(() => {
+      confetti({
+        particleCount: 50,
+        angle: 120,
+        spread: 55,
+        origin: { x: 1 },
+      });
+    }, 400);
+  };
+
+  // Submit all inspection results to Firebase
+  // In components/inspection/InspectionSwipeCards.jsx
+  const handleSubmitInspection = async () => {
+    if (isSubmitting) return;
+
+    setIsSubmitting(true);
+    try {
+      // Only send the inspection results array, not an object
+      await submitInspection(inspectionResults, inspectorName);
+
+      // Trigger confetti animation on successful submission
+      triggerConfetti();
+
+      showNotification("Report submitted successfully! 👍", "success");
+      setShowSubmitModal(false);
+
+      // Reset form with delay...
+      setTimeout(() => {
+        setInspectionItems([...inspectionData].sort((a, b) => a.id - b.id));
+        setInspectionResults([]);
+        setIsCompleted(false);
+        setActiveIndex(0);
+        setViewMode("inspection");
+
+        navigate("/");
+
+        if (onComplete && typeof onComplete === "function") {
+          onComplete();
+        }
+      }, 2000);
+    } catch (error) {
+      console.error("Error submitting report:", error);
+      showNotification("Error submitting report. Please try again.", "error");
+      setShowSubmitModal(false);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Open submission modal
+  const handleOpenSubmitModal = () => {
+    setShowSubmitModal(true);
+  };
 
   // Start a new inspection (reset everything)
   const handleStartNewInspection = () => {
-    setInspectionItems([...inspectionData]);
+    setInspectionItems([...inspectionData].sort((a, b) => a.id - b.id));
     setInspectionResults([]);
     setIsCompleted(false);
     setActiveIndex(0);
     setViewMode("inspection");
-    toast.info("Started new inspection 🚀");
+    showNotification("Started new inspection 🚀", "info");
   };
 
   // Handle the swipe left (fail) action
@@ -184,7 +192,7 @@ const handleSubmitInspection = async () => {
 
     setInspectionResults((prev) => [...prev, result]);
     removeItemFromQueue(item.id);
-    toast.success("Item passed! ✅");
+    showNotification("Item passed! ✅", "success");
 
     setProcessingCard(false);
   }, []);
@@ -202,16 +210,12 @@ const handleSubmitInspection = async () => {
   );
 
   // Remove item from the queue after action
-  const removeItemFromQueue = useCallback(
-    (itemId) => {
-      setInspectionItems((prev) => {
-        const newItems = prev.filter((v) => v.id !== itemId);
-
-        return newItems;
-      });
-    },
-    []
-  );
+  const removeItemFromQueue = useCallback((itemId) => {
+    setInspectionItems((prev) => {
+      const newItems = prev.filter((v) => v.id !== itemId);
+      return newItems;
+    });
+  }, []);
 
   // Submit fail reason from modal
   const submitFailReason = useCallback(() => {
@@ -232,7 +236,7 @@ const handleSubmitInspection = async () => {
     setFailReason("");
     setShowModal(false);
     removeItemFromQueue(currentItem.id);
-    toast.info("Item failed and documented 📝");
+    showNotification("Issue noted ✓", "warning");
     setProcessingCard(false);
   }, [currentItem, failReason, removeItemFromQueue]);
 
@@ -242,6 +246,12 @@ const handleSubmitInspection = async () => {
     setFailReason("");
     setFailReasonError("");
     setProcessingCard(false);
+  };
+
+  // Handle updates to inspection results from edited items
+  const handleUpdateResults = (updatedResults) => {
+    setInspectionResults(updatedResults);
+    showNotification("Inspection item updated", "success");
   };
 
   // Toggle between views
@@ -267,7 +277,33 @@ const handleSubmitInspection = async () => {
 
   return (
     <div className="flex flex-col items-center w-full max-w-md mx-auto relative min-h-[100dvh] bg-gradient-to-b from-gray-900 via-indigo-950 to-purple-950 py-2 px-4">
-      {/* Header Component - reduced margin */}
+      {/* Custom notification system */}
+      {notification && (
+        <div
+          className={`fixed left-1/2 bottom-6 transform -translate-x-1/2 z-50 px-4 py-2 rounded-lg shadow-lg text-white text-sm flex items-center ${
+            notification.type === "success"
+              ? "bg-gradient-to-r from-emerald-500 to-emerald-600 border border-emerald-300"
+              : notification.type === "error"
+              ? "bg-gradient-to-r from-red-500 to-red-600 border border-red-300"
+              : notification.type === "warning"
+              ? "bg-gradient-to-r from-amber-500 to-amber-600 border border-amber-300"
+              : "bg-gradient-to-r from-blue-500 to-blue-600 border border-blue-300"
+          }`}
+        >
+          {notification.type === "success" && (
+            <CheckCircle className="w-4 h-4 mr-2" />
+          )}
+          {notification.type === "error" && (
+            <XCircle className="w-4 h-4 mr-2" />
+          )}
+          {notification.type === "warning" && (
+            <AlertCircle className="w-4 h-4 mr-2" />
+          )}
+          {notification.message}
+        </div>
+      )}
+
+      {/* Header Component */}
       <div className="w-full mt-1 mb-1">
         <InspectionHeader
           stats={stats}
@@ -279,7 +315,7 @@ const handleSubmitInspection = async () => {
         />
       </div>
 
-      {/* Main Content Area - Positioned further up the page */}
+      {/* Main Content Area */}
       <motion.div
         className="relative h-[calc(100dvh-150px)] w-full my-1 overflow-hidden flex items-center justify-center"
         variants={containerVariants}
@@ -311,6 +347,7 @@ const handleSubmitInspection = async () => {
                 <InspectionComplete
                   stats={stats}
                   onStartNew={handleStartNewInspection}
+                  onSubmitInspection={handleOpenSubmitModal}
                 />
               )}
             </motion.div>
@@ -348,6 +385,7 @@ const handleSubmitInspection = async () => {
                   (r) => r.id === selectedResultId
                 )}
                 onBack={() => setView("history")}
+                onUpdateResults={handleUpdateResults}
                 isDetailView={true}
               />
             </motion.div>
@@ -367,50 +405,6 @@ const handleSubmitInspection = async () => {
         </div>
       )}
 
-      {/* Submit button - only show when all items are inspected */}
-      {isCompleted && viewMode === "inspection" && (
-        <motion.button
-          onClick={handleSubmitInspection}
-          disabled={isSubmitting}
-          className="w-full px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed flex items-center justify-center text-sm mt-1 font-medium shadow-md hover:shadow-lg transform hover:-translate-y-1 active:translate-y-0 transition-all duration-300"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: 20 }}
-          transition={{ duration: 0.3 }}
-        >
-          {isSubmitting ? (
-            <>
-              <svg
-                className="animate-spin -ml-1 mr-2 h-5 w-5 text-white"
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                ></circle>
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                ></path>
-              </svg>
-              Processing...
-            </>
-          ) : (
-            <>
-              <Send className="w-4 h-4 mr-2" />
-              Submit Inspection
-            </>
-          )}
-        </motion.button>
-      )}
-
       {/* Fail Modal Component */}
       <AnimatePresence>
         {showModal && (
@@ -428,32 +422,16 @@ const handleSubmitInspection = async () => {
         )}
       </AnimatePresence>
 
-      {/* Toast container - more modern for mobile */}
-      <ToastContainer
-        position="top-center" // Changed from bottom-center
-        autoClose={1500} // Shorter duration
-        hideProgressBar={false}
-        newestOnTop={true}
-        closeOnClick
-        rtl={false}
-        pauseOnFocusLoss={false}
-        draggable
-        pauseOnHover={false}
-        closeButton={false}
-        progressStyle={{ backgroundColor: "#3B82F6" }}
-        toastStyle={{
-          fontSize: "12px", // Smaller font
-          padding: "8px 12px", // More compact padding
-          minHeight: "40px", // Smaller height
-          maxWidth: "300px", // Limit width
-          borderRadius: "8px",
-          boxShadow:
-            "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
-          backgroundColor: "#1f2937", // Darker background
-          color: "#e5e7eb", // Light text
-          border: "1px solid rgba(59, 130, 246, 0.3)", // Blue border
-        }}
-      />
+      {/* Submission Modal */}
+      <AnimatePresence>
+        {showSubmitModal && (
+          <SubmissionModal
+            onSubmit={handleSubmitInspection}
+            onCancel={() => setShowSubmitModal(false)}
+            isSubmitting={isSubmitting}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 };

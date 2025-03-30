@@ -1,4 +1,4 @@
-// src/hooks/useInspections.js
+// src/hooks/useInspections.js - Updated for Firebase
 import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   collection,
@@ -84,60 +84,31 @@ const useInspections = (options = {}) => {
         const user = getCurrentUser();
         console.log("Fetching inspections for user:", user.uid);
 
-        // For testing purposes, return fake data instead of hitting Firestore
-        // Remove this block when Firebase is properly set up
-        const fakeInspectionsData = [
-          {
-            id: "fake-inspection-1",
-            userId: user.uid,
-            timestamp: new Date(Date.now() - 86400000 * 2), // 2 days ago
-            items: [],
-            totalItems: 26,
-            passedItems: 23,
-            failedItems: 3,
-            passRate: 88.46,
-          },
-          {
-            id: "fake-inspection-2",
-            userId: user.uid,
-            timestamp: new Date(Date.now() - 86400000 * 5), // 5 days ago
-            items: [],
-            totalItems: 26,
-            passedItems: 24,
-            failedItems: 2,
-            passRate: 92.31,
-          },
-        ];
+        // Create a query to get inspections for the mock user
+        const inspectionsQuery = query(
+          collection(db, "inspections"),
+          where("userId", "==", user.uid),
+          orderBy("timestamp", "desc"),
+          limit(limitCount)
+        );
 
-        // Uncomment this when Firebase is ready
-        /*
-      // Create a query to get inspections for the mock user
-      const inspectionsQuery = query(
-        collection(db, "inspections"),
-        where("userId", "==", user.uid),
-        orderBy("timestamp", "desc"),
-        limit(limitCount)
-      );
-
-      const querySnapshot = await getDocs(inspectionsQuery);
-      const inspectionsData = querySnapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          ...data,
-          timestamp: data.timestamp?.toDate(),
-          // Convert timestamps in inspection items if they exist
-          items: data.items?.map(item => ({
-            ...item,
-            timestamp: item.timestamp instanceof Timestamp ?
-              item.timestamp.toDate() :
-              item.timestamp
-          }))
-        };
-      });
-      */
-
-        const inspectionsData = fakeInspectionsData;
+        const querySnapshot = await getDocs(inspectionsQuery);
+        const inspectionsData = querySnapshot.docs.map((doc) => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            ...data,
+            timestamp: data.timestamp?.toDate(),
+            // Convert timestamps in inspection items if they exist
+            items: data.items?.map((item) => ({
+              ...item,
+              timestamp:
+                item.timestamp instanceof Timestamp
+                  ? item.timestamp.toDate()
+                  : item.timestamp,
+            })),
+          };
+        });
 
         setInspections(inspectionsData);
         setLastFetchTime(new Date());
@@ -194,81 +165,72 @@ const useInspections = (options = {}) => {
   );
 
   // Submit a new inspection with improved error handling and validation
-  const submitInspection = useCallback(
-    async (inspectionResults) => {
-      if (submitting) return null;
+const submitInspection = useCallback(
+  async (inspectionResults, inspectorName = null) => {
+    if (submitting) return null;
 
-      if (
-        !inspectionResults ||
-        !Array.isArray(inspectionResults) ||
-        inspectionResults.length === 0
-      ) {
-        throw new Error("Invalid inspection data");
-      }
+    if (
+      !inspectionResults ||
+      !Array.isArray(inspectionResults) ||
+      inspectionResults.length === 0
+    ) {
+      throw new Error("Invalid inspection data");
+    }
 
-      setSubmitting(true);
-      setError(null);
+    setSubmitting(true);
+    setError(null);
 
-      try {
-        const user = getCurrentUser(); // Using our mock user
+    try {
+      const user = getCurrentUser(); // Using our mock user for backend auth
 
-        // Calculate summary data
-        const passedItems = inspectionResults.filter(
-          (item) => item.status === "pass"
-        ).length;
-        const failedItems = inspectionResults.filter(
-          (item) => item.status === "fail"
-        ).length;
-        const totalItems = inspectionResults.length;
-        const passRate = totalItems > 0 ? (passedItems / totalItems) * 100 : 0;
+      // Calculate summary data
+      const passedItems = inspectionResults.filter(
+        (item) => item.status === "pass"
+      ).length;
+      const failedItems = inspectionResults.filter(
+        (item) => item.status === "fail"
+      ).length;
+      const totalItems = inspectionResults.length;
+      const passRate = totalItems > 0 ? (passedItems / totalItems) * 100 : 0;
 
-        // Prepare inspection data with standardized timestamps
-        const inspectionData = {
-          userId: user.uid,
-          userName: user.displayName || "Anonymous User",
-          userEmail: user.email,
-          timestamp: serverTimestamp(),
-          completedAt: new Date().toISOString(),
-          items: inspectionResults,
-          totalItems,
-          passedItems,
-          failedItems,
-          passRate: Math.round(passRate * 100) / 100, // Round to 2 decimal places
-          deviceInfo: {
-            platform: navigator.platform,
-            userAgent: navigator.userAgent,
-            language: navigator.language,
-            screenWidth: window.screen.width,
-            screenHeight: window.screen.height,
-          },
-        };
+      // Prepare inspection data with standardized timestamps
+      const inspectionData = {
+        userId: user.uid, // Keep this for backend permission checks
+        userName: inspectorName || user.displayName || "Anonymous User", // Use inspector name if provided
+        userEmail: user.email,
+        submittedBy: inspectorName || user.displayName || "Anonymous User", // Add explicit submittedBy field
+        timestamp: serverTimestamp(),
+        completedAt: new Date().toISOString(),
+        items: inspectionResults,
+        totalItems,
+        passedItems,
+        failedItems,
+        passRate: Math.round(passRate * 100) / 100, // Still track for analytics
+        deviceInfo: {
+          platform: navigator.platform,
+          userAgent: navigator.userAgent,
+          language: navigator.language,
+          screenWidth: window.screen.width,
+          screenHeight: window.screen.height,
+        },
+      };
 
-        console.log("Submitting inspection data:", inspectionData);
+      console.log("Submitting inspection data:", inspectionData);
 
-        // For development without Firebase, fake the submission
-        // Comment this block and uncomment the Firebase code when ready
-        const fakeId = `inspection-${Date.now()}`;
-        console.log(`Created fake inspection with ID: ${fakeId}`);
-
-        // Log analytics event (mock)
-        logCustomEvent("inspection_completed", {
-          inspection_id: fakeId,
-          total_items: totalItems,
-          pass_count: passedItems,
-          fail_count: failedItems,
-          pass_rate: passRate,
-        });
-
-        // Optimistically update local state
-        const newInspection = {
-          id: fakeId,
-          ...inspectionData,
-          timestamp: new Date(), // Use local date until server timestamp comes back
-        };
-
-        /* Uncomment when Firebase is ready
       // Add to inspections collection
-      const inspectionRef = await addDoc(collection(db, "inspections"), inspectionData);
+      const inspectionRef = await addDoc(
+        collection(db, "inspections"),
+        inspectionData
+      );
+
+      // Log analytics event
+      logCustomEvent("inspection_completed", {
+        inspection_id: inspectionRef.id,
+        total_items: totalItems,
+        pass_count: passedItems,
+        fail_count: failedItems,
+        inspector_name: inspectorName || "Anonymous",
+      });
 
       // Optimistically update local state
       const newInspection = {
@@ -276,26 +238,25 @@ const useInspections = (options = {}) => {
         ...inspectionData,
         timestamp: new Date(), // Use local date until server timestamp comes back
       };
-      */
 
-        setInspections((prev) => [newInspection, ...prev]);
-        setSubmitting(false);
+      setInspections((prev) => [newInspection, ...prev]);
+      setSubmitting(false);
 
-        // Force refresh to get the server timestamp
-        setTimeout(() => {
-          fetchInspections(true);
-        }, 1000);
+      // Force refresh to get the server timestamp
+      setTimeout(() => {
+        fetchInspections(true);
+      }, 1000);
 
-        return fakeId; // Change to inspectionRef.id when using Firebase
-      } catch (err) {
-        console.error("Error submitting inspection:", err);
-        setError(`Failed to submit inspection: ${err.message}`);
-        setSubmitting(false);
-        throw new Error(`Failed to submit inspection: ${err.message}`);
-      }
-    },
-    [submitting, fetchInspections]
-  );
+      return inspectionRef.id;
+    } catch (err) {
+      console.error("Error submitting inspection:", err);
+      setError(`Failed to submit inspection: ${err.message}`);
+      setSubmitting(false);
+      throw new Error(`Failed to submit inspection: ${err.message}`);
+    }
+  },
+  [submitting, fetchInspections]
+);
 
   // Update an existing inspection
   const updateInspection = useCallback(async (inspectionId, updates) => {

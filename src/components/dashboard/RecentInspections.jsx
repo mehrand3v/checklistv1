@@ -43,59 +43,76 @@ const InspectionItem = ({ inspection }) => {
         onClick={() => setExpanded(!expanded)}
       >
         <div className="flex items-center">
-          <div className="mr-3">
-            {getStatusIcon(inspection.overallStatus)}
-          </div>
-                  <div></div>
-      // components/dashboard/RecentInspections.jsx (continued)
-            <div>
-              <h3 className="font-medium text-gray-800">{inspection.storeName}</h3>
-              <p className="text-xs text-gray-500">{formatDate(inspection.timestamp)}</p>
-            </div>
-          </div>
-        </div>
+          <div className="mr-3">{getStatusIcon(inspection.overallStatus)}</div>
+          <div></div>
 
-        <div className="flex items-center">
-          <span className="text-sm font-medium mr-3" style={{
-            color: inspection.overallStatus === 'pass' ? '#10B981' : '#EF4444'
-          }}>
-            {getPassRate(inspection.results)}
-          </span>
-          <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${expanded ? 'transform rotate-180' : ''}`} />
+          <div>
+            <h3 className="font-medium text-gray-800">
+              {inspection.storeName}
+            </h3>
+            <p className="text-xs text-gray-500">
+              {formatDate(inspection.timestamp)}
+            </p>
+          </div>
         </div>
-    
+      </div>
+
+      <div className="flex items-center">
+        <span
+          className="text-sm font-medium mr-3"
+          style={{
+            color: inspection.overallStatus === "pass" ? "#10B981" : "#EF4444",
+          }}
+        >
+          {getPassRate(inspection.results)}
+        </span>
+        <ChevronDown
+          className={`h-4 w-4 text-gray-400 transition-transform ${
+            expanded ? "transform rotate-180" : ""
+          }`}
+        />
+      </div>
 
       {expanded && (
         <div className="px-3 pb-3 pt-1 border-t border-gray-100">
           <div className="text-xs text-gray-500 mb-2">Inspection Items</div>
           <div className="space-y-2 max-h-48 overflow-y-auto">
-            {inspection.results && inspection.results.map((item, index) => (
-              <div key={index} className="flex items-start">
-                <div className="mt-0.5 mr-2">
-                  {item.status === 'pass' ? (
-                    <CheckCircle className="h-3.5 w-3.5 text-green-500" />
-                  ) : (
-                    <XCircle className="h-3.5 w-3.5 text-red-500" />
-                  )}
+            {inspection.results &&
+              inspection.results.map((item, index) => (
+                <div key={index} className="flex items-start">
+                  <div className="mt-0.5 mr-2">
+                    {item.status === "pass" ? (
+                      <CheckCircle className="h-3.5 w-3.5 text-green-500" />
+                    ) : (
+                      <XCircle className="h-3.5 w-3.5 text-red-500" />
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <div className="text-xs text-gray-800">
+                      {item.description}
+                    </div>
+                    {item.status === "fail" && item.failReason && (
+                      <div className="text-xs text-red-500 mt-0.5">
+                        {item.failReason}
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <div className="flex-1">
-                  <div className="text-xs text-gray-800">{item.description}</div>
-                  {item.status === 'fail' && item.failReason && (
-                    <div className="text-xs text-red-500 mt-0.5">{item.failReason}</div>
-                  )}
-                </div>
-              </div>
-            ))}
+              ))}
           </div>
-
+          
           <div className="mt-3 pt-2 border-t border-gray-100 flex justify-between items-center">
-            <div className="text-xs text-gray-500">Completed by {inspection.submittedBy || 'Unknown'}</div>
-            {inspection.passRate && (
-              <div className="text-xs font-medium px-2 py-1 rounded-full" style={{
-                backgroundColor: inspection.passRate >= 70 ? '#D1FAE5' : '#FEE2E2',
-                color: inspection.passRate >= 70 ? '#065F46' : '#B91C1C'
-              }}>
-                {inspection.passRate}% pass rate
+            <div className="text-xs text-gray-500">
+              Completed by {inspection.submittedBy || "Unknown"}
+            </div>
+            {inspection.failedItems > 0 ? (
+              <div className="text-xs font-medium px-2 py-1 bg-amber-100 text-amber-800 rounded-full border border-amber-200">
+                {inspection.failedItems}{" "}
+                {inspection.failedItems === 1 ? "issue" : "issues"} found
+              </div>
+            ) : (
+              <div className="text-xs font-medium px-2 py-1 bg-green-100 text-green-800 rounded-full border border-green-200">
+                No issues found
               </div>
             )}
           </div>
