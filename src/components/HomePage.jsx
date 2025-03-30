@@ -60,16 +60,28 @@ const HomePage = () => {
       style={{
         backgroundImage,
       }}
-      className="relative grid min-h-screen place-content-center overflow-hidden px-4 py-24 text-gray-200"
+      className="relative min-h-screen overflow-hidden px-4 py-24 text-gray-200"
     >
-      <div className="relative z-10 flex flex-col items-center">
+      {/* Admin login button - positioned in the top-right corner with theme colors */}
+      <motion.button
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.5, delay: 0.6 }}
+        onClick={handleAdminLogin}
+        className="absolute top-4 right-4 z-20 p-2.5 rounded-full bg-primary/80 border border-primary/30 hover:bg-primary/90 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-primary/50 shadow-md"
+        aria-label="Admin Login"
+      >
+        <Lock className="h-4 w-4 text-primary-foreground" />
+      </motion.button>
+
+      <div className="relative z-10 flex flex-col items-center justify-center min-h-[calc(100vh-12rem)]">
         <motion.div
           initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ duration: 0.5 }}
-          className="mb-6 rounded-full bg-white/10 p-3"
+          className="mb-6 rounded-full bg-primary/20 p-4 border border-primary/30 shadow-md"
         >
-          <ClipboardCheck className="h-12 w-12 text-white" />
+          <ClipboardCheck className="h-12 w-12 text-primary" />
         </motion.div>
 
         <motion.h1
@@ -92,45 +104,26 @@ const HomePage = () => {
         </motion.p>
 
         {!showInspectionForm && !showStoreSelector ? (
-          <div className="flex flex-col sm:flex-row gap-4 mt-4">
-            <motion.button
-              style={{
-                border,
-                boxShadow,
-              }}
-              initial={{ y: 20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ duration: 0.5, delay: 0.3 }}
-              whileHover={{
-                scale: 1.05,
-              }}
-              whileTap={{
-                scale: 0.95,
-              }}
-              onClick={handleStartInspection}
-              className="group relative flex w-fit items-center gap-1.5 rounded-full bg-white/10 px-6 py-3 text-gray-50 font-medium transition-colors hover:bg-white/20"
-            >
-              Start Inspection
-              <ChevronRight className="transition-transform group-hover:translate-x-1" />
-            </motion.button>
-
-            <motion.button
-              initial={{ y: 20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ duration: 0.5, delay: 0.4 }}
-              whileHover={{
-                scale: 1.05,
-              }}
-              whileTap={{
-                scale: 0.95,
-              }}
-              onClick={handleAdminLogin}
-              className="group relative flex w-fit items-center gap-1.5 rounded-full bg-gray-800/60 border border-gray-700 px-6 py-3 text-gray-300 font-medium transition-colors hover:bg-gray-800"
-            >
-              <Lock className="h-4 w-4 mr-2" />
-              Admin Login
-            </motion.button>
-          </div>
+          <motion.button
+            style={{
+              border,
+              boxShadow,
+            }}
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ duration: 0.5, delay: 0.3 }}
+            whileHover={{
+              scale: 1.05,
+            }}
+            whileTap={{
+              scale: 0.95,
+            }}
+            onClick={handleStartInspection}
+            className="group relative flex w-fit items-center gap-1.5 rounded-full bg-primary px-6 py-3 text-primary-foreground font-medium transition-colors hover:bg-primary/90"
+          >
+            Start Inspection
+            <ChevronRight className="transition-transform group-hover:translate-x-1" />
+          </motion.button>
         ) : showInspectionForm ? (
           <motion.div
             initial={{ scale: 0.9, opacity: 0 }}
@@ -140,7 +133,7 @@ const HomePage = () => {
             <h2 className="text-xl font-bold mb-4 text-white">Your Name</h2>
 
             {formError && (
-              <div className="mb-4 p-3 bg-red-400/20 border border-red-500/50 rounded-lg text-white text-sm">
+              <div className="mb-4 p-3 bg-destructive/20 border border-destructive/50 rounded-lg text-white text-sm">
                 {formError}
               </div>
             )}
@@ -149,13 +142,13 @@ const HomePage = () => {
               <div>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <User className="h-5 w-5 text-gray-400" />
+                    <User className="h-5 w-5 text-primary/80" />
                   </div>
                   <input
                     type="text"
                     value={inspectorName}
                     onChange={(e) => setInspectorName(e.target.value)}
-                    className="block w-full pl-10 pr-3 py-3 bg-gray-800/60 border border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-white placeholder-gray-400"
+                    className="block w-full pl-10 pr-3 py-3 bg-gray-800/60 border border-gray-700 rounded-lg focus:ring-2 focus:ring-primary/70 focus:border-primary/70 text-white placeholder-gray-400"
                     placeholder="Enter your name"
                   />
                 </div>
@@ -165,7 +158,7 @@ const HomePage = () => {
                 <button
                   type="button"
                   onClick={() => setShowInspectionForm(false)}
-                  className="px-4 py-2 bg-gray-800 text-gray-300 rounded-lg hover:bg-gray-700 transition-colors"
+                  className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/90 transition-colors"
                 >
                   Back
                 </button>
@@ -173,7 +166,6 @@ const HomePage = () => {
                 <motion.button
                   type="submit"
                   style={{
-                    border,
                     boxShadow,
                   }}
                   whileHover={{
@@ -182,7 +174,7 @@ const HomePage = () => {
                   whileTap={{
                     scale: 0.97,
                   }}
-                  className="flex-1 px-4 py-2 bg-white/10 rounded-lg text-white font-medium hover:bg-white/20 transition-colors flex items-center justify-center"
+                  className="flex-1 px-4 py-2 bg-primary rounded-lg text-primary-foreground font-medium hover:bg-primary/90 transition-all duration-300 flex items-center justify-center"
                 >
                   Next
                   <ChevronRight className="ml-2 h-4 w-4" />
@@ -204,9 +196,9 @@ const HomePage = () => {
 
       {/* Animated gradient orbs */}
       <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -top-40 -right-40 h-80 w-80 rounded-full bg-blue-500/20 blur-3xl"></div>
-        <div className="absolute top-40 -left-40 h-80 w-80 rounded-full bg-purple-500/20 blur-3xl"></div>
-        <div className="absolute -bottom-40 left-40 h-80 w-80 rounded-full bg-green-500/20 blur-3xl"></div>
+        <div className="absolute -top-40 -right-40 h-80 w-80 rounded-full bg-primary/20 blur-3xl"></div>
+        <div className="absolute top-40 -left-40 h-80 w-80 rounded-full bg-secondary/20 blur-3xl"></div>
+        <div className="absolute -bottom-40 left-40 h-80 w-80 rounded-full bg-accent/20 blur-3xl"></div>
       </div>
     </motion.section>
   );
