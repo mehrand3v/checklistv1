@@ -136,11 +136,37 @@ const CommonIssuesChart = ({ storeId, dateRange }) => {
               tick={{ fontSize: 12 }}
             />
             <Tooltip content={<CustomTooltip />} />
-            <Bar dataKey="count" fill="#7C3AED" radius={[0, 4, 4, 0]}>
+            <Bar
+              dataKey="count"
+              name="Issues"
+              fill="#7C3AED"
+              radius={[0, 4, 4, 0]}
+            >
+              {chartData.map((entry, index) => {
+                // Calculate fixed percentage for gradient fill
+                const fixedPercentage = entry.fixedCount
+                  ? entry.fixedCount / entry.count
+                  : 0;
+
+                return (
+                  <Cell
+                    key={`cell-${index}`}
+                    fill={`#7C3AED`}
+                    opacity={0.7 + 0.3 * (index / chartData.length)}
+                  />
+                );
+              })}
+            </Bar>
+            <Bar
+              dataKey="fixedCount"
+              name="Fixed"
+              fill="#3B82F6"
+              radius={[0, 4, 4, 0]}
+            >
               {chartData.map((entry, index) => (
                 <Cell
-                  key={`cell-${index}`}
-                  fill={`#7C3AED`}
+                  key={`cell-fixed-${index}`}
+                  fill={`#3B82F6`}
                   opacity={0.7 + 0.3 * (index / chartData.length)}
                 />
               ))}

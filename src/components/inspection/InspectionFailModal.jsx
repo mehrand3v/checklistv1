@@ -1,19 +1,19 @@
 // InspectionFailModal.jsx - Modal for entering failure reason, modern design
 import React from "react";
 import { motion } from "framer-motion";
-import { AlertTriangle, XCircle, X, Send } from "lucide-react";
+import { AlertTriangle, XCircle, X, Send, CheckSquare } from "lucide-react";
 
 const InspectionFailModal = ({
   currentItem,
   failReason,
   failReasonError,
+  isFixed,
   onCancel,
   onSubmit,
   onChangeReason,
+  onChangeFixed,
 }) => {
   return (
-   
-
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-3">
       <motion.div
         initial={{ opacity: 0, scale: 0.9, y: 20 }}
@@ -63,6 +63,28 @@ const InspectionFailModal = ({
             {failReasonError}
           </p>
         )}
+
+        {/* Fixed issue checkbox */}
+        <div className="mt-3 mb-4">
+          <label className="flex items-center space-x-2 cursor-pointer">
+            <div
+              className={`w-5 h-5 rounded border flex items-center justify-center ${
+                isFixed
+                  ? "bg-green-600 border-green-500"
+                  : "bg-gray-800 border-gray-600"
+              }`}
+            >
+              {isFixed && <CheckSquare className="h-4 w-4 text-white" />}
+            </div>
+            <input
+              type="checkbox"
+              className="hidden"
+              checked={isFixed}
+              onChange={(e) => onChangeFixed(e.target.checked)}
+            />
+            <span className="text-sm text-gray-300">Issue has been fixed</span>
+          </label>
+        </div>
 
         <div className="flex justify-end space-x-3 mt-4">
           <button

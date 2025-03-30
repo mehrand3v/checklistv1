@@ -150,9 +150,18 @@ const InspectionTrends = ({ storeId, dateRange }) => {
             />
             <Line
               type="monotone"
+              dataKey="fixedIssues"
+              name="Fixed Issues"
+              stroke="#3B82F6"
+              strokeWidth={2}
+              dot={{ r: 4, strokeWidth: 2 }}
+              activeDot={{ r: 6 }}
+            />
+            <Line
+              type="monotone"
               dataKey="total"
               name="Total Items"
-              stroke="#3B82F6"
+              stroke="#8B5CF6"
               strokeWidth={2}
               dot={{ r: 4, strokeWidth: 2 }}
               activeDot={{ r: 6 }}

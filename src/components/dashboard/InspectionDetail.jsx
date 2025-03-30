@@ -6,6 +6,7 @@ import {
   Clock,
   AlertCircle,
   CheckCircle,
+  CheckSquare,
   User,
   Store,
   Trash2,
@@ -171,7 +172,7 @@ const InspectionDetail = ({ inspection, onBack, onDelete }) => {
       </div>
 
       {/* Inspection summary */}
-      <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="mb-6 grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-gray-800/60 rounded-lg p-4 border border-gray-700/50 flex items-center">
           <div className="w-12 h-12 rounded-full bg-gray-700/50 flex items-center justify-center mr-3">
             <CheckCircle className="h-6 w-6 text-green-400" />
@@ -196,13 +197,28 @@ const InspectionDetail = ({ inspection, onBack, onDelete }) => {
           </div>
         </div>
 
+        {/* New card for fixed issues */}
         <div className="bg-gray-800/60 rounded-lg p-4 border border-gray-700/50 flex items-center">
           <div className="w-12 h-12 rounded-full bg-gray-700/50 flex items-center justify-center mr-3">
-            <FileText className="h-6 w-6 text-blue-400" />
+            <CheckSquare className="h-6 w-6 text-blue-400" />
+          </div>
+          <div>
+            <div className="text-sm text-gray-400">Fixed Issues</div>
+            <div className="text-2xl font-bold text-blue-400">
+              {inspection.items?.filter(
+                (item) => item.status === "fail" && item.isFixed
+              ).length || 0}
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-gray-800/60 rounded-lg p-4 border border-gray-700/50 flex items-center">
+          <div className="w-12 h-12 rounded-full bg-gray-700/50 flex items-center justify-center mr-3">
+            <FileText className="h-6 w-6 text-indigo-400" />
           </div>
           <div>
             <div className="text-sm text-gray-400">Total Items</div>
-            <div className="text-2xl font-bold text-blue-400">
+            <div className="text-2xl font-bold text-indigo-400">
               {inspection.totalItems || 0}
             </div>
           </div>
@@ -255,10 +271,24 @@ const InspectionDetail = ({ inspection, onBack, onDelete }) => {
                     </div>
 
                     {item.status === "fail" && item.failReason && (
-                      <div className="mt-2 p-3 bg-red-900/20 border border-red-500/30 rounded-md text-red-300 text-sm">
-                        <div className="font-medium mb-1 flex items-center">
-                          <AlertCircle className="h-4 w-4 mr-1" />
-                          Issue Details:
+                      <div
+                        className={`mt-2 p-3 rounded-md text-sm ${
+                          item.isFixed
+                            ? "bg-green-900/20 border border-green-500/30 text-green-300"
+                            : "bg-red-900/20 border border-red-500/30 text-red-300"
+                        }`}
+                      >
+                        <div className="font-medium mb-1 flex items-center justify-between">
+                          <div className="flex items-center">
+                            <AlertCircle className="h-4 w-4 mr-1" />
+                            Issue Details:
+                          </div>
+                          {item.isFixed && (
+                            <div className="flex items-center bg-green-800/40 text-green-300 px-2 py-0.5 rounded text-xs border border-green-600/30">
+                              <CheckSquare className="h-3 w-3 mr-1" />
+                              Fixed
+                            </div>
+                          )}
                         </div>
                         <p>{item.failReason}</p>
                       </div>

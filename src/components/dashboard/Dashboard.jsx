@@ -15,8 +15,10 @@ import {
   Search,
   Trash2,
   Edit,
-    AlertCircle,
-  CheckCircle
+  AlertCircle,
+  Home,
+  File,
+  Store,
 } from "lucide-react";
 
 // Import dashboard components
@@ -29,17 +31,10 @@ import CommonIssuesChart from "./CommonIssuesChart";
 import StorePerformance from "./StorePerformance";
 import DateRangePicker from "./DateRangePicker";
 
-// Import Firebase services
-import {
-  getInspections,
-  getStores,
-  getInspectionsStats,
-  getInspectionTrendsData,
-  getCommonIssues,
-  getStorePerformance,
-} from "@/services/inspections/inspectionService";
-
 const Dashboard = () => {
+  const navigate = useNavigate();
+
+  // State variables
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectedStore, setSelectedStore] = useState("all");
@@ -50,8 +45,8 @@ const Dashboard = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [error, setError] = useState(null);
   const [notification, setNotification] = useState(null);
-
-  const navigate = useNavigate();
+  const [inspections, setInspections] = useState([]);
+  const [totalCount, setTotalCount] = useState(0);
 
   // Custom notification function
   const showNotification = (message, type = "info") => {
@@ -60,6 +55,33 @@ const Dashboard = () => {
     setTimeout(() => {
       setNotification(null);
     }, 3000);
+  };
+
+  // Function to get store name without loading inspections
+  const getStoreName = (storeId) => {
+    // This is a simple fallback if we don't have inspection data yet
+    return "Store #" + storeId;
+  };
+
+  // Function to show issues directly
+  const handleViewIssues = (inspection) => {
+    // Filter only the failed items for this inspection
+    if (inspection.items) {
+      const failedItems = inspection.items.filter(
+        (item) => item.status === "fail"
+      );
+      if (failedItems.length > 0) {
+        // Set the selected inspection and view its details
+        setSelectedInspection({
+          ...inspection,
+          items: failedItems, // Only show the failed items
+        });
+      } else {
+        showNotification("No issues found for this inspection", "info");
+      }
+    } else {
+      showNotification("No detailed item data available", "warning");
+    }
   };
 
   useEffect(() => {
@@ -187,32 +209,43 @@ const Dashboard = () => {
             </h1>
           </div>
 
-          {/* Mobile menu button */}
-          <button
-            className="md:hidden p-2 rounded-md text-gray-300 hover:bg-gray-700"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          >
-            {mobileMenuOpen ? (
-              <X className="h-6 w-6" />
-            ) : (
-              <Menu className="h-6 w-6" />
-            )}
-          </button>
-
-          {/* Desktop navigation */}
-          <div className="hidden md:flex items-center space-x-4">
-            <div className="text-gray-300 flex items-center">
-              <div className="w-8 h-8 bg-blue-900/50 border border-blue-500/30 rounded-full flex items-center justify-center mr-2">
-                {user?.email?.charAt(0).toUpperCase() || "A"}
-              </div>
-              <span>{user?.email || "Admin User"}</span>
-            </div>
+          <div className="flex items-center space-x-2">
+            {/* Home button */}
             <button
-              onClick={handleLogout}
-              className="flex items-center px-3 py-2 bg-red-500/20 text-red-300 border border-red-500/30 rounded-lg hover:bg-red-500/30 transition-colors"
+              onClick={() => navigate("/")}
+              className="flex items-center px-3 py-2 bg-gray-800/60 text-gray-300 border border-gray-700/50 rounded-lg hover:bg-gray-700/60 transition-colors"
             >
-              <LogOut className="h-4 w-4 mr-1" />
-              Logout
+              <Home className="h-5 w-5" />
+              <span className="ml-2 hidden sm:inline">Home</span>
+            </button>
+
+            {/* Desktop navigation */}
+            <div className="hidden md:flex items-center space-x-4">
+              <div className="text-gray-300 flex items-center">
+                <div className="w-8 h-8 bg-blue-900/50 border border-blue-500/30 rounded-full flex items-center justify-center mr-2">
+                  {user?.email?.charAt(0).toUpperCase() || "A"}
+                </div>
+                <span>{user?.email || "Admin User"}</span>
+              </div>
+              <button
+                onClick={handleLogout}
+                className="flex items-center px-3 py-2 bg-red-500/20 text-red-300 border border-red-500/30 rounded-lg hover:bg-red-500/30 transition-colors"
+              >
+                <LogOut className="h-4 w-4 mr-1" />
+                Logout
+              </button>
+            </div>
+
+            {/* Mobile menu button */}
+            <button
+              className="md:hidden p-2 rounded-md text-gray-300 hover:bg-gray-700"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            >
+              {mobileMenuOpen ? (
+                <X className="h-6 w-6" />
+              ) : (
+                <Menu className="h-6 w-6" />
+              )}
             </button>
           </div>
         </div>
@@ -351,6 +384,32 @@ const Dashboard = () => {
           </div>
         </div>
 
+        {/* Selected store display and total count */}
+        {selectedStore !== "all" && (
+          <div className="bg-gray-800/40 border border-gray-700/50 rounded-lg p-3 mb-4 flex flex-col sm:flex-row items-start sm:items-center sm:justify-between gap-2">
+            <div className="flex items-center">
+              <Store className="h-5 w-5 text-blue-400 mr-2" />
+              <span className="text-gray-300 font-medium">
+                Selected Store:{" "}
+                <span className="text-white">
+                  {inspections.length > 0
+                    ? inspections[0].storeName
+                    : getStoreName(selectedStore)}
+                </span>
+              </span>
+            </div>
+            <div className="flex items-center">
+              <FileText className="h-5 w-5 text-purple-400 mr-2" />
+              <span className="text-gray-300">
+                Total Records:{" "}
+                <span className="text-white font-medium">
+                  {totalCount || 0}
+                </span>
+              </span>
+            </div>
+          </div>
+        )}
+
         {/* Dashboard content based on active tab */}
         {activeTab === "inspections" && (
           <div className="mb-6">
@@ -378,6 +437,8 @@ const Dashboard = () => {
                   searchQuery={searchQuery}
                   onSelect={handleInspectionSelect}
                   onDelete={handleInspectionDelete}
+                  onViewIssues={handleViewIssues}
+                  onTotalCountChange={(count) => setTotalCount(count)}
                 />
               </div>
             )}

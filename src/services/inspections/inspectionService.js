@@ -66,15 +66,26 @@ export const getInspections = async ({
     if (searchQuery) {
       const lowerQuery = searchQuery.toLowerCase();
       inspections = inspections.filter((inspection) => {
-        const matchesStoreId = inspection.storeId
-          ?.toLowerCase()
-          .includes(lowerQuery);
-        const matchesStoreName = inspection.storeName
-          ?.toLowerCase()
-          .includes(lowerQuery);
-        const matchesInspector = inspection.submittedBy
-          ?.toLowerCase()
-          .includes(lowerQuery);
+        const matchesStoreId =
+          typeof inspection.storeId === "string"
+            ? inspection.storeId.toLowerCase().includes(lowerQuery)
+            : String(inspection.storeId || "")
+                .toLowerCase()
+                .includes(lowerQuery);
+
+        const matchesStoreName =
+          typeof inspection.storeName === "string"
+            ? inspection.storeName.toLowerCase().includes(lowerQuery)
+            : String(inspection.storeName || "")
+                .toLowerCase()
+                .includes(lowerQuery);
+
+        const matchesInspector =
+          typeof inspection.submittedBy === "string"
+            ? inspection.submittedBy.toLowerCase().includes(lowerQuery)
+            : String(inspection.submittedBy || "")
+                .toLowerCase()
+                .includes(lowerQuery);
 
         return matchesStoreId || matchesStoreName || matchesInspector;
       });
@@ -140,11 +151,16 @@ export const getCommonIssues = async (storeId, dateRange) => {
             if (issueMap.has(issueKey)) {
               const issue = issueMap.get(issueKey);
               issue.count += 1;
+              // Track fixed issues separately
+              if (item.isFixed) {
+                issue.fixedCount = (issue.fixedCount || 0) + 1;
+              }
             } else {
               issueMap.set(issueKey, {
                 id: item.id,
                 description: item.description,
                 count: 1,
+                fixedCount: item.isFixed ? 1 : 0,
               });
             }
           }
@@ -200,6 +216,7 @@ export const getStorePerformance = async (dateRange) => {
           inspections: 0,
           issues: 0,
           satisfactoryItems: 0,
+          fixedIssues: 0,
         });
       }
 
@@ -207,6 +224,15 @@ export const getStorePerformance = async (dateRange) => {
       storeData.inspections += 1;
       storeData.issues += inspection.issueItems || 0;
       storeData.satisfactoryItems += inspection.satisfactoryItems || 0;
+      storeData.fixedIssues += inspection.fixedIssues || 0;
+
+      // Count fixed issues from items array if fixedIssues count isn't already present
+      if (!inspection.fixedIssues && inspection.items) {
+        const fixedCount = inspection.items.filter(
+          (item) => item.status === "fail" && item.isFixed
+        ).length;
+        storeData.fixedIssues += fixedCount;
+      }
     });
 
     // Convert to array and sort alphabetically by default
@@ -331,6 +357,7 @@ export const getInspectionsStats = async (
     let total = 0;
     let satisfactoryItems = 0;
     let issueItems = 0;
+    let fixedIssues = 0;
     let stores = new Set();
 
     querySnapshot.forEach((doc) => {
@@ -340,6 +367,15 @@ export const getInspectionsStats = async (
       // Count satisfactory/issue items
       satisfactoryItems += inspection.satisfactoryItems || 0;
       issueItems += inspection.issueItems || 0;
+      fixedIssues += inspection.fixedIssues || 0;
+
+      // Count fixed issues from items array if fixedIssues count isn't already present
+      if (!inspection.fixedIssues && inspection.items) {
+        const fixedCount = inspection.items.filter(
+          (item) => item.status === "fail" && item.isFixed
+        ).length;
+        fixedIssues += fixedCount;
+      }
 
       // Track unique stores
       if (inspection.storeId) {
@@ -351,6 +387,7 @@ export const getInspectionsStats = async (
       total,
       satisfactoryItems,
       issueItems,
+      fixedIssues,
       stores: stores.size,
     };
   } catch (error) {
@@ -415,6 +452,7 @@ export const getInspectionTrendsData = async (
           date: dateKey,
           satisfactoryItems: 0,
           issueItems: 0,
+          fixedIssues: 0,
           total: 0,
         });
       }
@@ -422,8 +460,17 @@ export const getInspectionTrendsData = async (
       const trend = trendMap.get(dateKey);
       trend.satisfactoryItems += inspection.satisfactoryItems || 0;
       trend.issueItems += inspection.issueItems || 0;
+      trend.fixedIssues += inspection.fixedIssues || 0;
       trend.total +=
         (inspection.satisfactoryItems || 0) + (inspection.issueItems || 0);
+
+      // Count fixed issues from items array if fixedIssues count isn't already present
+      if (!inspection.fixedIssues && inspection.items) {
+        const fixedCount = inspection.items.filter(
+          (item) => item.status === "fail" && item.isFixed
+        ).length;
+        trend.fixedIssues += fixedCount;
+      }
     });
 
     // Convert to array and sort by date
@@ -478,6 +525,9 @@ export const submitInspection = async (
     const issueItems = inspectionResults.filter(
       (item) => item.status === "fail"
     ).length;
+    const fixedIssues = inspectionResults.filter(
+      (item) => item.status === "fail" && item.isFixed
+    ).length;
     const totalItems = inspectionResults.length;
 
     // Create inspection document
@@ -488,6 +538,7 @@ export const submitInspection = async (
       totalItems,
       satisfactoryItems,
       issueItems,
+      fixedIssues,
       deviceInfo: {
         platform: navigator.platform,
         userAgent: navigator.userAgent,

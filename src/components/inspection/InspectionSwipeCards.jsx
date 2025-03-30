@@ -34,6 +34,7 @@ const InspectionSwipeCards = () => {
   const [currentItem, setCurrentItem] = useState(null);
   const [failReason, setFailReason] = useState("");
   const [failReasonError, setFailReasonError] = useState("");
+  const [isFixed, setIsFixed] = useState(false);
   const [inspectionResults, setInspectionResults] = useState([]);
   const [isCompleted, setIsCompleted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -213,6 +214,7 @@ const InspectionSwipeCards = () => {
     setShowModal(true);
     setFailReason("");
     setFailReasonError("");
+    setIsFixed(false); // Reset fixed state
 
     // Log analytics event
     logCustomEvent("inspection_item_failed_swipe", {
@@ -289,24 +291,33 @@ const InspectionSwipeCards = () => {
       description: currentItem.description,
       status: "fail",
       failReason: failReason,
+      isFixed: isFixed, // Add the fixed status
       timestamp: new Date().toISOString(),
     };
 
     setInspectionResults((prev) => [...prev, result]);
     setFailReason("");
+    setIsFixed(false);
     setShowModal(false);
     removeItemFromQueue(currentItem.id);
-    showNotification("Issue noted ✓", "warning");
 
-    // Log analytics event with fail reason
+    // Show different notification based on fixed status
+    if (isFixed) {
+      showNotification("Issue noted and marked as fixed ✓", "success");
+    } else {
+      showNotification("Issue noted ✓", "warning");
+    }
+
+    // Log analytics event with fail reason and fixed status
     logCustomEvent("inspection_item_failed_details", {
       item_id: currentItem.id,
       item_description: currentItem.description,
       fail_reason: failReason,
+      is_fixed: isFixed,
     });
 
     setProcessingCard(false);
-  }, [currentItem, failReason, removeItemFromQueue]);
+  }, [currentItem, failReason, isFixed, removeItemFromQueue]);
 
   // Handle cancel from fail modal - don't remove the item
   const handleCancelFail = () => {
@@ -485,12 +496,14 @@ const InspectionSwipeCards = () => {
             currentItem={currentItem}
             failReason={failReason}
             failReasonError={failReasonError}
+            isFixed={isFixed}
             onCancel={handleCancelFail}
             onSubmit={submitFailReason}
             onChangeReason={(value) => {
               setFailReason(value);
               if (value.trim()) setFailReasonError("");
             }}
+            onChangeFixed={(value) => setIsFixed(value)}
           />
         )}
       </AnimatePresence>
