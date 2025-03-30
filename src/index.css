@@ -17,3 +17,17 @@ body {
 .dvh-minus-header {
     height: calc(100dvh - 140px);
 }
+/* Ensure full height */
+html,
+body,
+#root {
+    height: 100%;
+
+    /* Prevent unwanted scrolling */
+}
+
+/* Wrapper fills the viewport */
+.wrapper {
+    min-height: 100vh;
+    
+}
