@@ -61,40 +61,23 @@ const InspectionHeader = ({
       {viewMode === "inspection" && (
         <>
           {/* Progress indicator */}
-          <div className="flex justify-between items-center mb-2">
-            <div className="flex items-center">
-              {viewMode !== "inspection" && (
-                <button
-                  onClick={() => setView("inspection")}
-                  className="mr-2 p-1.5 hover:bg-gray-700 rounded-full transition-colors"
-                >
-                  <ChevronLeft className="w-5 h-5 text-gray-300" />
-                </button>
-              )}
-              <h1
-                className={`text-lg font-bold ${
-                  viewMode === "inspection" ? "text-blue-400" : "text-gray-200"
-                }`}
-              >
-                {viewMode === "inspection" ? (
-                  <>Quality Check</>
-                ) : viewMode === "history" ? (
-                  <>Inspection Summary</>
-                ) : (
-                  <>Item Details</>
-                )}
-              </h1>
+          <div className="flex justify-between items-center text-xs mb-2 px-1">
+            <div className="text-sm font-medium text-gray-300">
+              {stats.completed}/{stats.total} Items
             </div>
-            <div className="flex space-x-2">
-              {hasResults && viewMode === "inspection" && (
-                <button
-                  onClick={() => setView("history")}
-                  className="w-9 h-9 flex items-center justify-center bg-indigo-600/60 hover:bg-indigo-500 text-white rounded-full transition-colors border border-indigo-400 shadow-md"
-                  title="View Checklist"
-                >
-                  <ClipboardList className="w-5 h-5 text-white" />
-                </button>
-              )}
+            <div className="flex space-x-3">
+              <div className="flex items-center bg-green-900/30 px-2 py-1 rounded-md border border-green-500/30">
+                <CheckCircle className="w-3.5 h-3.5 text-green-400 mr-1" />
+                <span className="text-green-300 font-medium">
+                  {stats.passCount}
+                </span>
+              </div>
+              <div className="flex items-center bg-red-900/30 px-2 py-1 rounded-md border border-red-500/30">
+                <XCircle className="w-3.5 h-3.5 text-red-400 mr-1" />
+                <span className="text-red-300 font-medium">
+                  {stats.failCount}
+                </span>
+              </div>
             </div>
           </div>
 
