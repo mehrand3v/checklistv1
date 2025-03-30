@@ -12,6 +12,7 @@ import InspectionFailModal from "./InspectionFailModal";
 import InspectionResults from "./InspectionResults";
 import InspectionComplete from "./InspectionComplete";
 import { inspectionData } from "./inspectionData";
+import confetti from "canvas-confetti";
 
 // Import custom hook
 import useInspections from "@/hooks/useInspections";
@@ -38,6 +39,34 @@ const InspectionSwipeCards = ({ onComplete }) => {
   const { submitInspection, loading: submissionLoading } = useInspections({
     autoFetch: false,
   });
+const triggerConfetti = () => {
+  // First burst
+  confetti({
+    particleCount: 100,
+    spread: 70,
+    origin: { y: 0.6 },
+  });
+
+  // Second burst after a short delay
+  setTimeout(() => {
+    confetti({
+      particleCount: 50,
+      angle: 60,
+      spread: 55,
+      origin: { x: 0 },
+    });
+  }, 250);
+
+  // Third burst from the opposite side
+  setTimeout(() => {
+    confetti({
+      particleCount: 50,
+      angle: 120,
+      spread: 55,
+      origin: { x: 1 },
+    });
+  }, 400);
+};
 
   // Initialize inspection data
   useEffect(() => {
@@ -92,22 +121,28 @@ const handleSubmitInspection = async () => {
     };
 
     await submitInspection(submissionData);
+
+    // Trigger confetti animation on successful submission
+    triggerConfetti();
+
     toast.success("Inspection submitted successfully! 👍");
 
-    // Reset and redirect
-    setInspectionItems([...inspectionData]);
-    setInspectionResults([]);
-    setIsCompleted(false);
-    setActiveIndex(0);
-    setViewMode("inspection");
+    // Reset and redirect - add a slight delay to allow confetti to be visible
+    setTimeout(() => {
+      setInspectionItems([...inspectionData]);
+      setInspectionResults([]);
+      setIsCompleted(false);
+      setActiveIndex(0);
+      setViewMode("inspection");
 
-    // Navigate back to home page after submission
-    navigate("/");
+      // Navigate back to home page after submission
+      navigate("/");
 
-    // Notify parent component that inspection is complete
-    if (onComplete && typeof onComplete === "function") {
-      onComplete();
-    }
+      // Notify parent component that inspection is complete
+      if (onComplete && typeof onComplete === "function") {
+        onComplete();
+      }
+    }, 2000);
   } catch (error) {
     console.error("Error submitting inspection:", error);
     toast.error("Error submitting inspection. Please try again.");
@@ -395,10 +430,10 @@ const handleSubmitInspection = async () => {
 
       {/* Toast container - more modern for mobile */}
       <ToastContainer
-        position="bottom-center"
-        autoClose={2000}
+        position="top-center" // Changed from bottom-center
+        autoClose={1500} // Shorter duration
         hideProgressBar={false}
-        newestOnTop={false}
+        newestOnTop={true}
         closeOnClick
         rtl={false}
         pauseOnFocusLoss={false}
@@ -407,14 +442,16 @@ const handleSubmitInspection = async () => {
         closeButton={false}
         progressStyle={{ backgroundColor: "#3B82F6" }}
         toastStyle={{
-          fontSize: "13px",
-          padding: "10px 16px",
-          minHeight: "50px",
-          borderRadius: "10px",
+          fontSize: "12px", // Smaller font
+          padding: "8px 12px", // More compact padding
+          minHeight: "40px", // Smaller height
+          maxWidth: "300px", // Limit width
+          borderRadius: "8px",
           boxShadow:
             "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
-          backgroundColor: "#fff",
-          border: "1px solid rgba(0, 0, 0, 0.05)",
+          backgroundColor: "#1f2937", // Darker background
+          color: "#e5e7eb", // Light text
+          border: "1px solid rgba(59, 130, 246, 0.3)", // Blue border
         }}
       />
     </div>
