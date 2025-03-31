@@ -15,7 +15,7 @@ import {
   CheckSquare,
   AlertCircle,
 } from "lucide-react";
-import styles from "./bubble.module.css";
+
 
 const BubbleText = ({ text }) => {
   return (

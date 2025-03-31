@@ -28,6 +28,6 @@ body,
 
 /* Wrapper fills the viewport */
 .wrapper {
-    min-height: 100vh;
-    
+    min-height: 100%;
+
 }
