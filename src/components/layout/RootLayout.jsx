@@ -14,7 +14,7 @@ const RootLayout = () => {
   const isInspectionPage = location.pathname.includes("/inspection");
 
   return (
-    <div className="wrapper min-h-screen bg-background text-foreground flex flex-col">
+    <div className="wrapper bg-background text-foreground flex flex-col">
       {/* Toast notifications */}
       <Toaster position="top-right" />
 

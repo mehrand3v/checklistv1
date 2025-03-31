@@ -32,7 +32,7 @@ const InspectionSwipeCards = () => {
   // Use the auto-scale hook with your desired target height
   const { containerRef, scale } = useAutoScale({
     targetHeight: 800, // Adjust based on your ideal design height
-    minScale: 1, // Minimum scale factor (prevent too much shrinking)
+    minScale: 0.85, // Minimum scale factor (prevent too much shrinking)
     maxScale: 1, // Maximum scale factor
   });
 

@@ -9,7 +9,9 @@ html,
 body,
 #root {
     height: 100%;
-
+-webkit-tap-highlight-color: transparent;
+    -webkit-text-size-adjust: 100%;
+    touch-action: none;
     /* Prevent unwanted scrolling */
 }
 
