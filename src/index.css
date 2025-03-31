@@ -6,20 +6,20 @@
 
 /* Ensure full height */
 html,
-body,
-#root {
+body {
     height: 100%;
--webkit-tap-highlight-color: transparent;
+    -webkit-tap-highlight-color: transparent;
     -webkit-text-size-adjust: 100%;
     touch-action: none;
     /* Prevent unwanted scrolling */
 }
 
 /* Wrapper fills the viewport */
-.wrapper {
+#root {
     min-height: 100%;
 
 }
+
 /* Auto-scaling for inspection pages */
 .inspection-container {
     height: 100%;
