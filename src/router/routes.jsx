@@ -5,6 +5,7 @@ import { getCurrentUser, onAuthStateChange } from "@/services/auth";
 import { logPageView } from "@/services/analytics";
 
 // Import components
+import RootLayout from "@/components/layout/RootLayout";
 import HomePage from "@/components/HomePage";
 import LoginPage from "@/components/auth/LoginPage";
 import Dashboard from "@/components/dashboard/Dashboard";
@@ -58,36 +59,41 @@ const PrivateRoute = ({ children }) => {
 // Define routes
 const routes = [
   {
-    path: "/",
-    element: <HomePage />,
-  },
-  {
-    path: "/login",
-    element: <LoginPage />,
-  },
-  {
-    path: "/inspection",
-    element: <InspectionSwipeCards />,
-  },
-  {
-    path: "/dashboard",
-    element: (
-      <PrivateRoute>
-        <Dashboard />
-      </PrivateRoute>
-    ),
-  },
-  {
-    path: "/dashboard/*",
-    element: (
-      <PrivateRoute>
-        <Dashboard />
-      </PrivateRoute>
-    ),
-  },
-  {
-    path: "*",
-    element: <NotFound />,
+    element: <RootLayout />,
+    children: [
+      {
+        path: "/",
+        element: <HomePage />,
+      },
+      {
+        path: "/login",
+        element: <LoginPage />,
+      },
+      {
+        path: "/inspection",
+        element: <InspectionSwipeCards />,
+      },
+      {
+        path: "/dashboard",
+        element: (
+          <PrivateRoute>
+            <Dashboard />
+          </PrivateRoute>
+        ),
+      },
+      {
+        path: "/dashboard/*",
+        element: (
+          <PrivateRoute>
+            <Dashboard />
+          </PrivateRoute>
+        ),
+      },
+      {
+        path: "*",
+        element: <NotFound />,
+      },
+    ],
   },
 ];
 

@@ -3,20 +3,7 @@
 
 @plugin 'tailwindcss-animate';
 
-/* Prevent pull-to-refresh on mobile */
-html,
-body {
-    overscroll-behavior-y: contain;
-}
 
-/* Dynamic viewport height for better mobile experience */
-.dvh-screen {
-    height: 100dvh;
-}
-
-.dvh-minus-header {
-    height: calc(100dvh - 140px);
-}
 /* Ensure full height */
 html,
 body,
@@ -30,4 +17,37 @@ body,
 .wrapper {
     min-height: 100%;
 
+}
+/* Auto-scaling for inspection pages */
+.inspection-container {
+    height: 100%;
+    width: 100%;
+    max-width: 500px;
+    /* Adjust based on your design */
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    transform-origin: center center;
+    /* This will ensure content scales to fit vertically */
+    transform: scale(var(--scale-factor, 1));
+}
+
+/* Add this class to any fixed-height containers in your inspection workflow */
+.inspection-content {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
+
+/* On smaller screens, prevent any user scaling/zooming in inspection views */
+@media (max-width: 768px) {
+    .inspection-view {
+        touch-action: none;
+        user-select: none;
+        -webkit-user-select: none;
+        -webkit-touch-callout: none;
+    }
 }

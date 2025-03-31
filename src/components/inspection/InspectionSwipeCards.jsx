@@ -1,9 +1,12 @@
-// components/inspection/InspectionSwipeCards.jsx - Updated to include store information
+// components/inspection/InspectionSwipeCards.jsx - Updated with auto-scaling
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate, useLocation } from "react-router-dom";
 import { CheckCircle, XCircle, AlertCircle } from "lucide-react";
 import confetti from "canvas-confetti";
+
+// Import custom hook for auto-scaling
+import useAutoScale from "@/hooks/useAutoScale";
 
 // Import subcomponents
 import InspectionHeader from "./InspectionHeader";
@@ -26,6 +29,13 @@ import {
 import { submitInspection } from "@/services/inspections/inspectionService";
 
 const InspectionSwipeCards = () => {
+  // Use the auto-scale hook with your desired target height
+  const { containerRef, scale } = useAutoScale({
+    targetHeight: 800, // Adjust based on your ideal design height
+    minScale: 0.7, // Minimum scale factor (prevent too much shrinking)
+    maxScale: 1, // Maximum scale factor
+  });
+
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -410,7 +420,10 @@ const InspectionSwipeCards = () => {
   };
 
   return (
-    <div className="flex flex-col items-center w-full max-w-md mx-auto relative min-h-[100dvh] bg-gradient-to-b from-gray-900 via-indigo-950 to-purple-950 py-2 px-4">
+    <div
+      ref={containerRef}
+      className="inspection-container inspection-view flex flex-col items-center w-full max-w-md mx-auto relative min-h-[100dvh] bg-gradient-to-b from-gray-900 via-indigo-950 to-purple-950 py-2 px-4"
+    >
       {/* Store indicator */}
       <div className="w-full bg-indigo-900/30 rounded-lg px-3 py-2 mb-2 flex items-center justify-between border border-indigo-500/30">
         <div className="flex items-center">
