@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 
 const InspectionTable = (props) => {
-  // Destructure props
+  // Destructure props with defaults for pagination
   const {
     storeId,
     dateRange,
@@ -22,18 +22,20 @@ const InspectionTable = (props) => {
     onDelete,
     onViewIssues,
     onTotalCountChange,
+    currentPage = 1,
+    itemsPerPage = 25,
+    onPageChange = () => {},
+    onTotalPagesChange = () => {},
   } = props;
 
   // Component state
   const [inspections, setInspections] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
   const [sortField, setSortField] = useState("timestamp");
   const [sortDirection, setSortDirection] = useState("desc");
-  const itemsPerPage = 25;
+  const [deleteConfirmation, setDeleteConfirmation] = useState(null);
 
   // Load data when filters change
   useEffect(() => {
@@ -55,8 +57,11 @@ const InspectionTable = (props) => {
 
         // Update local state
         setInspections(data);
-        setTotalPages(Math.ceil(total / itemsPerPage));
         setTotalItems(total);
+
+        // Calculate total pages and update parent component
+        const totalPages = Math.ceil(total / itemsPerPage);
+        onTotalPagesChange(totalPages);
 
         // Notify parent component if callback provided
         if (typeof onTotalCountChange === "function") {
@@ -76,9 +81,11 @@ const InspectionTable = (props) => {
     dateRange,
     searchQuery,
     currentPage,
+    itemsPerPage,
     sortField,
     sortDirection,
     onTotalCountChange,
+    onTotalPagesChange,
   ]);
 
   // Handle sort column click
@@ -130,8 +137,23 @@ const InspectionTable = (props) => {
   // Handle retry button click
   const handleRetry = () => {
     setError(null);
-    setCurrentPage(1);
     // The useEffect will trigger a refetch
+  };
+
+  // Handle delete confirmation
+  const confirmDelete = (inspectionId) => {
+    setDeleteConfirmation(inspectionId);
+  };
+
+  // Execute delete
+  const executeDelete = (inspectionId) => {
+    onDelete(inspectionId);
+    setDeleteConfirmation(null);
+  };
+
+  // Cancel delete
+  const cancelDelete = () => {
+    setDeleteConfirmation(null);
   };
 
   // Display loading state
@@ -178,7 +200,15 @@ const InspectionTable = (props) => {
                 <span className="sm:hidden">Date</span>{" "}
                 {renderSortIcon("timestamp")}
               </th>
-              {/* Removed store column since we're already filtering by store */}
+              {/* Store column is omitted if filtering by store */}
+              {storeId === "all" && (
+                <th
+                  className="p-2 sm:p-3 font-medium text-gray-300 cursor-pointer hover:text-white hidden md:table-cell"
+                  onClick={() => handleSort("storeName")}
+                >
+                  Store {renderSortIcon("storeName")}
+                </th>
+              )}
               <th
                 className="p-2 sm:p-3 font-medium text-gray-300 cursor-pointer hover:text-white hidden sm:table-cell"
                 onClick={() => handleSort("submittedBy")}
@@ -213,6 +243,12 @@ const InspectionTable = (props) => {
                         new Date(inspection.timestamp).toLocaleDateString()}
                     </span>
                   </td>
+                  {/* Store column is omitted if filtering by store */}
+                  {storeId === "all" && (
+                    <td className="p-2 sm:p-3 hidden md:table-cell text-blue-300">
+                      {inspection.storeName || "Unknown"}
+                    </td>
+                  )}
                   <td className="p-2 sm:p-3 hidden sm:table-cell">
                     {inspection.submittedBy || "Unknown"}
                   </td>
@@ -247,19 +283,42 @@ const InspectionTable = (props) => {
                       <Eye className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" />
                       <span className="hidden sm:inline">View</span>
                     </button>
-                    <button
-                      onClick={() => onDelete(inspection.id)}
-                      className="inline-flex items-center px-1.5 sm:px-2 py-1 bg-red-600/30 text-red-300 border border-red-500/30 rounded hover:bg-red-600/50 transition-colors text-xs sm:text-sm"
-                    >
-                      <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" />
-                      <span className="hidden sm:inline">Delete</span>
-                    </button>
+
+                    {/* Delete button with confirmation */}
+                    {deleteConfirmation === inspection.id ? (
+                      <div className="inline-flex items-center text-xs sm:text-sm">
+                        <span className="mr-1 text-red-400">Confirm?</span>
+                        <button
+                          onClick={() => executeDelete(inspection.id)}
+                          className="inline-flex items-center px-1.5 sm:px-2 py-1 bg-red-600/30 text-red-300 border border-red-500/30 rounded hover:bg-red-600/50 transition-colors mr-1"
+                        >
+                          <span>Yes</span>
+                        </button>
+                        <button
+                          onClick={cancelDelete}
+                          className="inline-flex items-center px-1.5 sm:px-2 py-1 bg-gray-700/50 text-gray-300 border border-gray-600/30 rounded hover:bg-gray-700 transition-colors"
+                        >
+                          <span>No</span>
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => confirmDelete(inspection.id)}
+                        className="inline-flex items-center px-1.5 sm:px-2 py-1 bg-red-600/30 text-red-300 border border-red-500/30 rounded hover:bg-red-600/50 transition-colors text-xs sm:text-sm"
+                      >
+                        <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" />
+                        <span className="hidden sm:inline">Delete</span>
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))
             ) : (
               <tr>
-                <td colSpan="5" className="p-8 text-center text-gray-400">
+                <td
+                  colSpan={storeId === "all" ? "5" : "4"}
+                  className="p-8 text-center text-gray-400"
+                >
                   <FileText className="h-10 w-10 mx-auto mb-2 text-gray-500" />
                   <p className="text-lg font-medium mb-1">
                     No inspections found
@@ -273,36 +332,6 @@ const InspectionTable = (props) => {
           </tbody>
         </table>
       </div>
-
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex justify-between items-center p-4 border-t border-gray-700/50">
-          <div className="text-sm text-gray-400">
-            Showing page {currentPage} of {totalPages} ({totalItems} total
-            items)
-          </div>
-          <div className="flex space-x-2">
-            <button
-              onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-              disabled={currentPage === 1}
-              className="px-3 py-1 bg-gray-800 border border-gray-700 rounded flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <ChevronLeft className="h-4 w-4 mr-1" />
-              Previous
-            </button>
-            <button
-              onClick={() =>
-                setCurrentPage(Math.min(totalPages, currentPage + 1))
-              }
-              disabled={currentPage === totalPages}
-              className="px-3 py-1 bg-gray-800 border border-gray-700 rounded flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Next
-              <ChevronRight className="h-4 w-4 ml-1" />
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
