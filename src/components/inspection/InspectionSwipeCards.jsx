@@ -1,4 +1,4 @@
-// components/inspection/InspectionSwipeCards.jsx - Removed auto-scaling
+// components/inspection/InspectionSwipeCards.jsx - Optimized for mobile
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -14,15 +14,13 @@ import InspectionComplete from "./InspectionComplete";
 import SubmissionModal from "./SubmissionModal";
 import { inspectionData } from "./inspectionData";
 
-// Import analytics service
+// Import services
 import {
   logInspectionStarted,
   logInspectionCompleted,
   logInspectionSubmitted,
   logCustomEvent,
 } from "@/services/analytics";
-
-// Import Firebase services
 import { submitInspection } from "@/services/inspections/inspectionService";
 
 const InspectionSwipeCards = () => {
@@ -30,7 +28,7 @@ const InspectionSwipeCards = () => {
   const navigate = useNavigate();
 
   // Get inspector name and store information from location state
-  const inspectorName = location.state?.inspectorName || "Anonymous Inspector";
+  const inspectorName = location.state?.inspectorName || "Anonymous";
   const storeId = location.state?.storeId || null;
   const storeName = location.state?.storeName || "Unknown Store";
 
@@ -60,15 +58,9 @@ const InspectionSwipeCards = () => {
 
   // Initialize inspection data
   useEffect(() => {
-    // Sort by ID to ensure items are in correct order
     const sortedItems = [...inspectionData].sort((a, b) => a.id - b.id);
     setInspectionItems(sortedItems);
-
-    // Log inspection started event with store information
-    logInspectionStarted(inspectorName, {
-      storeId,
-      storeName,
-    });
+    logInspectionStarted(inspectorName, { storeId, storeName });
   }, [inspectorName, storeId, storeName]);
 
   // Calculate stats for display
@@ -81,14 +73,13 @@ const InspectionSwipeCards = () => {
     ).length;
     const total = inspectionData.length;
     const completed = inspectionResults.length;
-    const remaining = total - completed;
 
     return {
       passCount,
       failCount,
       total,
       completed,
-      remaining,
+      remaining: total - completed,
       percentComplete: total > 0 ? Math.round((completed / total) * 100) : 0,
       passRate: completed > 0 ? Math.round((passCount / completed) * 100) : 0,
     };
@@ -99,8 +90,6 @@ const InspectionSwipeCards = () => {
     if (stats.completed === stats.total && stats.total > 0) {
       setIsCompleted(true);
       showNotification("Inspection complete! 🎉", "success");
-
-      // Log inspection completed event with stats
       logInspectionCompleted({
         total_items: stats.total,
         pass_count: stats.passCount,
@@ -110,22 +99,12 @@ const InspectionSwipeCards = () => {
         storeName,
       });
     }
-  }, [
-    stats.completed,
-    stats.total,
-    stats.passCount,
-    stats.failCount,
-    stats.passRate,
-    storeId,
-    storeName,
-  ]);
+  }, [stats, storeId, storeName]);
 
   // Custom notification function
   const showNotification = (message, type = "info") => {
     setNotification({ message, type });
-    setTimeout(() => {
-      setNotification(null);
-    }, 2000);
+    setTimeout(() => setNotification(null), 2000);
   };
 
   // Trigger confetti animation
@@ -135,27 +114,9 @@ const InspectionSwipeCards = () => {
       spread: 70,
       origin: { y: 0.6 },
     });
-
-    setTimeout(() => {
-      confetti({
-        particleCount: 50,
-        angle: 60,
-        spread: 55,
-        origin: { x: 0 },
-      });
-    }, 250);
-
-    setTimeout(() => {
-      confetti({
-        particleCount: 50,
-        angle: 120,
-        spread: 55,
-        origin: { x: 1 },
-      });
-    }, 400);
   };
 
-  // Submit inspection results to Firebase
+  // Submit inspection results
   const handleSubmitInspection = async () => {
     if (isSubmitting) return;
 
@@ -163,7 +124,6 @@ const InspectionSwipeCards = () => {
     setSubmissionError(null);
 
     try {
-      // Submit to Firebase with store information
       const inspectionId = await submitInspection(
         inspectionResults,
         inspectorName,
@@ -171,7 +131,6 @@ const InspectionSwipeCards = () => {
         storeName
       );
 
-      // Log analytics event
       logInspectionSubmitted(inspectionId, {
         total_items: stats.total,
         pass_count: stats.passCount,
@@ -182,22 +141,11 @@ const InspectionSwipeCards = () => {
         store_name: storeName,
       });
 
-      // Trigger confetti animation
       triggerConfetti();
-
       showNotification("Report submitted successfully! 👍", "success");
       setShowSubmitModal(false);
 
-      // Reset and navigate with delay
-      setTimeout(() => {
-        setInspectionItems([...inspectionData].sort((a, b) => a.id - b.id));
-        setInspectionResults([]);
-        setIsCompleted(false);
-        setActiveIndex(0);
-        setViewMode("inspection");
-
-        navigate("/");
-      }, 2000);
+      setTimeout(() => navigate("/"), 2000);
     } catch (error) {
       console.error("Error submitting report:", error);
       setSubmissionError(
@@ -215,34 +163,16 @@ const InspectionSwipeCards = () => {
     setSubmissionError(null);
   };
 
-  // Start a new inspection (reset everything)
-  const handleStartNewInspection = () => {
-    setInspectionItems([...inspectionData].sort((a, b) => a.id - b.id));
-    setInspectionResults([]);
-    setIsCompleted(false);
-    setActiveIndex(0);
-    setViewMode("inspection");
-    showNotification("Started new inspection 🚀", "info");
-
-    // Log analytics event
-    logInspectionStarted(inspectorName, {
-      storeId,
-      storeName,
-    });
-  };
-
   // Handle the swipe left (fail) action
   const handleFail = useCallback(
     (item) => {
-      // Save the item before opening modal
       setCurrentItem({ ...item });
       setProcessingCard(true);
       setShowModal(true);
       setFailReason("");
       setFailReasonError("");
-      setIsFixed(false); // Reset fixed state
+      setIsFixed(false);
 
-      // Log analytics event
       logCustomEvent("inspection_item_failed_swipe", {
         item_id: item.id,
         item_description: item.description,
@@ -269,7 +199,6 @@ const InspectionSwipeCards = () => {
       removeItemFromQueue(item.id);
       showNotification("Item passed! ✅", "success");
 
-      // Log analytics event
       logCustomEvent("inspection_item_passed", {
         item_id: item.id,
         item_description: item.description,
@@ -287,8 +216,6 @@ const InspectionSwipeCards = () => {
     (action, item) => {
       if (action === "pass") {
         handlePass(item);
-
-        // Log analytics event
         logCustomEvent("inspection_item_passed_button", {
           item_id: item.id,
           item_description: item.description,
@@ -297,8 +224,6 @@ const InspectionSwipeCards = () => {
         });
       } else if (action === "fail") {
         handleFail(item);
-
-        // Log analytics event
         logCustomEvent("inspection_item_failed_button", {
           item_id: item.id,
           item_description: item.description,
@@ -312,10 +237,7 @@ const InspectionSwipeCards = () => {
 
   // Remove item from the queue after action
   const removeItemFromQueue = useCallback((itemId) => {
-    setInspectionItems((prev) => {
-      const newItems = prev.filter((v) => v.id !== itemId);
-      return newItems;
-    });
+    setInspectionItems((prev) => prev.filter((v) => v.id !== itemId));
   }, []);
 
   // Submit fail reason from modal
@@ -330,7 +252,7 @@ const InspectionSwipeCards = () => {
       description: currentItem.description,
       status: "fail",
       failReason: failReason,
-      isFixed: isFixed, // Add the fixed status
+      isFixed: isFixed,
       timestamp: new Date().toISOString(),
     };
 
@@ -340,14 +262,11 @@ const InspectionSwipeCards = () => {
     setShowModal(false);
     removeItemFromQueue(currentItem.id);
 
-    // Show different notification based on fixed status
-    if (isFixed) {
-      showNotification("Issue noted and marked as fixed ✓", "success");
-    } else {
-      showNotification("Issue noted ✓", "warning");
-    }
+    showNotification(
+      isFixed ? "Issue noted and marked as fixed ✓" : "Issue noted ✓",
+      isFixed ? "success" : "warning"
+    );
 
-    // Log analytics event with fail reason and fixed status
     logCustomEvent("inspection_item_failed_details", {
       item_id: currentItem.id,
       item_description: currentItem.description,
@@ -367,7 +286,7 @@ const InspectionSwipeCards = () => {
     storeName,
   ]);
 
-  // Handle cancel from fail modal - don't remove the item
+  // Handle cancel from fail modal
   const handleCancelFail = () => {
     setShowModal(false);
     setFailReason("");
@@ -375,12 +294,10 @@ const InspectionSwipeCards = () => {
     setProcessingCard(false);
   };
 
-  // Handle updates to inspection results from edited items
+  // Handle updates to inspection results
   const handleUpdateResults = (updatedResults) => {
     setInspectionResults(updatedResults);
     showNotification("Inspection item updated", "success");
-
-    // Log analytics event
     logCustomEvent("inspection_item_updated", {
       item_count: updatedResults.length,
       store_id: storeId,
@@ -399,68 +316,62 @@ const InspectionSwipeCards = () => {
   // Animation variants
   const containerVariants = {
     hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: { duration: 0.3 },
-    },
-    exit: {
-      opacity: 0,
-      transition: { duration: 0.2 },
-    },
+    visible: { opacity: 1, transition: { duration: 0.3 } },
+    exit: { opacity: 0, transition: { duration: 0.2 } },
   };
 
   return (
-    <div className="inspection-container inspection-view flex flex-col items-center w-full max-w-md mx-auto relative min-h-[100dvh] bg-gradient-to-b from-gray-900 via-indigo-950 to-purple-950 py-2 px-4">
-      {/* Store indicator */}
-      <div className="w-full bg-indigo-900/30 rounded-lg px-3 py-2 mb-2 flex items-center justify-between border border-indigo-500/30">
+    <div className="flex flex-col items-center w-full max-w-md mx-auto min-h-screen bg-gradient-to-b from-gray-900 via-indigo-950 to-purple-950 p-1">
+      {/* Store indicator - more compact */}
+      <div className="w-full bg-indigo-900/30 rounded-lg px-2 py-1 mb-1 flex items-center justify-between text-xs">
         <div className="flex items-center">
-          <span className="text-sm text-gray-300">Store:</span>
-          <span className="ml-2 text-blue-300 font-medium">{storeName}</span>
+          <span className="text-gray-300">Store:</span>
+          <span className="ml-1 text-blue-300 font-medium">{storeName}</span>
         </div>
-        <div className="text-xs text-gray-400">{inspectorName}</div>
+        <div className="text-gray-400">{inspectorName}</div>
       </div>
 
-      {/* Custom notification system */}
+      {/* Notification */}
       {notification && (
         <div
-          className={`fixed left-1/2 bottom-6 transform -translate-x-1/2 z-50 px-4 py-2 rounded-lg shadow-lg text-white text-sm flex items-center ${
+          className={`fixed bottom-4 z-50 px-3 py-1 rounded-lg shadow-lg text-white text-xs flex items-center ${
             notification.type === "success"
-              ? "bg-gradient-to-r from-emerald-500 to-emerald-600 border border-emerald-300"
+              ? "bg-green-600"
               : notification.type === "error"
-              ? "bg-gradient-to-r from-red-500 to-red-600 border border-red-300"
+              ? "bg-red-600"
               : notification.type === "warning"
-              ? "bg-gradient-to-r from-amber-500 to-amber-600 border border-amber-300"
-              : "bg-gradient-to-r from-blue-500 to-blue-600 border border-blue-300"
+              ? "bg-amber-600"
+              : "bg-blue-600"
           }`}
         >
           {notification.type === "success" && (
-            <CheckCircle className="w-4 h-4 mr-2" />
+            <CheckCircle className="w-3 h-3 mr-1" />
           )}
           {notification.type === "error" && (
-            <XCircle className="w-4 h-4 mr-2" />
+            <XCircle className="w-3 h-3 mr-1" />
           )}
           {notification.type === "warning" && (
-            <AlertCircle className="w-4 h-4 mr-2" />
+            <AlertCircle className="w-3 h-3 mr-1" />
           )}
           {notification.message}
         </div>
       )}
 
-      {/* Header Component */}
-      <div className="w-full mt-1 mb-1">
+      {/* Header - more compact */}
+      <div className="w-full">
         <InspectionHeader
           stats={stats}
           viewMode={viewMode}
           setView={setView}
           hasResults={inspectionResults.length > 0}
-          onStartNew={handleStartNewInspection}
+          onStartNew={() => {}} // Removed this feature to simplify
           isCompleted={isCompleted || inspectionItems.length === 0}
         />
       </div>
 
-      {/* Main Content Area */}
+      {/* Main Content Area - taller with less padding */}
       <motion.div
-        className="relative h-[calc(100dvh-150px)] w-full my-1 overflow-hidden flex items-center justify-center"
+        className="relative h-[calc(100vh-120px)] w-full my-1 overflow-hidden flex items-center justify-center"
         variants={containerVariants}
         initial="hidden"
         animate="visible"
@@ -489,7 +400,7 @@ const InspectionSwipeCards = () => {
               ) : (
                 <InspectionComplete
                   stats={stats}
-                  onStartNew={handleStartNewInspection}
+                  onStartNew={() => {}} // Removed this feature to simplify
                   onSubmitInspection={handleOpenSubmitModal}
                 />
               )}
@@ -536,19 +447,17 @@ const InspectionSwipeCards = () => {
         </AnimatePresence>
       </motion.div>
 
-      {/* Swipe instructions - only show during active inspection */}
+      {/* Swipe instructions - only show during active inspection, more compact */}
       {viewMode === "inspection" && inspectionItems.length > 0 && (
-        <div className="w-full flex justify-between text-xs text-gray-400 px-2 py-1 bg-gray-800/50 rounded-lg border border-gray-700/50 mb-1">
-          <div className="flex items-center text-red-400 font-medium">
-            <span>← Swipe LEFT to FAIL</span>
-          </div>
-          <div className="flex items-center text-green-400 font-medium">
-            <span>Swipe RIGHT to PASS →</span>
+        <div className="w-full flex justify-between text-xs text-gray-400 px-2 py-1 bg-gray-800/50 rounded-lg mb-1">
+          <div className="text-red-400 font-medium">← Swipe LEFT to FAIL</div>
+          <div className="text-green-400 font-medium">
+            Swipe RIGHT to PASS →
           </div>
         </div>
       )}
 
-      {/* Fail Modal Component */}
+      {/* Modals */}
       <AnimatePresence>
         {showModal && (
           <InspectionFailModal
@@ -565,10 +474,7 @@ const InspectionSwipeCards = () => {
             onChangeFixed={(value) => setIsFixed(value)}
           />
         )}
-      </AnimatePresence>
 
-      {/* Submission Modal */}
-      <AnimatePresence>
         {showSubmitModal && (
           <SubmissionModal
             onSubmit={handleSubmitInspection}
