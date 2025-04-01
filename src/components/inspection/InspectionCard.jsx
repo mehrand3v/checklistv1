@@ -1,4 +1,4 @@
-// components/inspection/InspectionCard.jsx - Optimized for mobile
+// components/inspection/InspectionCard.jsx - Optimized for mobile with integrated progress
 import React from "react";
 import {
   motion,
@@ -6,9 +6,27 @@ import {
   useTransform,
   useAnimation,
 } from "framer-motion";
-import { ThumbsUp, ThumbsDown, ArrowRight, ArrowLeft } from "lucide-react";
+import {
+  ThumbsUp,
+  ThumbsDown,
+  ArrowRight,
+  ArrowLeft,
+  CheckCircle,
+  XCircle,
+  ChevronLeft,
+  ClipboardList,
+} from "lucide-react";
 
-const InspectionCard = ({ item, onFail, onPass, onQuickAction }) => {
+const InspectionCard = ({
+  item,
+  onFail,
+  onPass,
+  onQuickAction,
+  stats, // Added stats prop
+  viewMode,
+  setView,
+  hasResults,
+}) => {
   const x = useMotionValue(0);
   const controls = useAnimation();
   const [isProcessing, setIsProcessing] = React.useState(false);
@@ -118,6 +136,9 @@ const InspectionCard = ({ item, onFail, onPass, onQuickAction }) => {
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.8 }}
       transition={{ duration: 0.2 }}
+      style={{
+        marginTop: "-30px", // Push card a bit higher
+      }}
     >
       <motion.div
         className="relative w-full h-5/6 bg-gray-900/80 rounded-xl overflow-hidden hover:cursor-grab active:cursor-grabbing border border-gray-700/50 shadow-lg backdrop-blur-sm"
@@ -136,8 +157,61 @@ const InspectionCard = ({ item, onFail, onPass, onQuickAction }) => {
         tabIndex={0}
         onKeyDown={handleKeyDown}
       >
+        {/* Integrated Header with Progress - New! */}
+        <div className="w-full bg-gray-800/70 border-b border-gray-700/50 p-1.5">
+          <div className="flex items-center justify-between gap-1">
+            {/* Left side - Counter */}
+            <div className="text-xs font-medium text-gray-300 whitespace-nowrap">
+              {stats.completed}/{stats.total} Items
+            </div>
+
+            {/* Center - Back button for non-inspection views */}
+            {viewMode !== "inspection" && (
+              <button
+                onClick={() => setView("inspection")}
+                className="p-1 hover:bg-gray-700 rounded-full transition-colors"
+              >
+                <ChevronLeft className="w-4 h-4 text-gray-300" />
+              </button>
+            )}
+
+            {/* Right side - Stats */}
+            <div className="flex items-center gap-1.5">
+              <div className="flex items-center bg-green-900/30 px-1 py-0.5 rounded-md border border-green-500/30">
+                <CheckCircle className="w-3 h-3 text-green-400 mr-1" />
+                <span className="text-xs text-green-300 font-medium">
+                  {stats.passCount}
+                </span>
+              </div>
+              <div className="flex items-center bg-red-900/30 px-1 py-0.5 rounded-md border border-red-500/30">
+                <XCircle className="w-3 h-3 text-red-400 mr-1" />
+                <span className="text-xs text-red-300 font-medium">
+                  {stats.failCount}
+                </span>
+              </div>
+              {hasResults && (
+                <button
+                  onClick={() => setView("history")}
+                  className="p-1 hover:bg-gray-700 rounded-full transition-colors"
+                  title="View history"
+                >
+                  <ClipboardList className="w-4 h-4 text-indigo-300" />
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Compact progress bar */}
+          <div className="w-full bg-gray-700/50 rounded-full h-1 mt-1 overflow-hidden">
+            <div
+              className="h-1 rounded-full bg-gradient-to-r from-blue-500 to-purple-600"
+              style={{ width: `${stats.percentComplete}%` }}
+            ></div>
+          </div>
+        </div>
+
         {/* Card content */}
-        <div className="flex flex-col h-full p-2 pt-2">
+        <div className="flex flex-col h-[calc(100%-48px)] p-2 pt-2">
           {/* Item number badge */}
           <div className="self-center mb-1">
             <motion.div
@@ -196,6 +270,12 @@ const InspectionCard = ({ item, onFail, onPass, onQuickAction }) => {
           </div>
         </div>
       </motion.div>
+
+      {/* Swipe instructions at the bottom of card */}
+      <div className="w-full flex justify-between text-xs text-gray-400 px-2 py-1 bg-gray-800/50 rounded-lg mt-2 absolute bottom-0">
+        <div className="text-red-400 font-medium">← Swipe LEFT to FAIL</div>
+        <div className="text-green-400 font-medium">Swipe RIGHT to PASS →</div>
+      </div>
     </motion.div>
   );
 };

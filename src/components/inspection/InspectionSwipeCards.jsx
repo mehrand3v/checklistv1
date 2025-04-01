@@ -1,13 +1,12 @@
-// components/inspection/InspectionSwipeCards.jsx - Optimized for mobile
+// components/inspection/InspectionSwipeCards.jsx - Updated with integrated progress
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate, useLocation } from "react-router-dom";
-import { CheckCircle, XCircle, AlertCircle } from "lucide-react";
+import { CheckCircle, XCircle, AlertCircle, ChevronLeft } from "lucide-react";
 import confetti from "canvas-confetti";
 
 // Import subcomponents
-import InspectionHeader from "./InspectionHeader";
-import InspectionCard from "./InspectionCard";
+import InspectionCard from "./InspectionCard"; // Updated component with integrated progress
 import InspectionFailModal from "./InspectionFailModal";
 import InspectionResults from "./InspectionResults";
 import InspectionComplete from "./InspectionComplete";
@@ -322,15 +321,6 @@ const InspectionSwipeCards = () => {
 
   return (
     <div className="flex flex-col items-center w-full max-w-md mx-auto min-h-screen bg-gradient-to-b from-gray-900 via-indigo-950 to-purple-950 p-1">
-      {/* Store indicator - more compact */}
-      <div className="w-full bg-indigo-900/30 rounded-lg px-2 py-1 mb-1 flex items-center justify-between text-xs">
-        <div className="flex items-center">
-          <span className="text-gray-300">Store:</span>
-          <span className="ml-1 text-blue-300 font-medium">{storeName}</span>
-        </div>
-        <div className="text-gray-400">{inspectorName}</div>
-      </div>
-
       {/* Notification */}
       {notification && (
         <div
@@ -357,21 +347,9 @@ const InspectionSwipeCards = () => {
         </div>
       )}
 
-      {/* Header - more compact */}
-      <div className="w-full">
-        <InspectionHeader
-          stats={stats}
-          viewMode={viewMode}
-          setView={setView}
-          hasResults={inspectionResults.length > 0}
-          onStartNew={() => {}} // Removed this feature to simplify
-          isCompleted={isCompleted || inspectionItems.length === 0}
-        />
-      </div>
-
       {/* Main Content Area - taller with less padding */}
       <motion.div
-        className="relative h-[calc(100vh-120px)] w-full my-1 overflow-hidden flex items-center justify-center"
+        className="relative h-[calc(100vh-20px)] w-full my-1 overflow-hidden flex items-center justify-center"
         variants={containerVariants}
         initial="hidden"
         animate="visible"
@@ -395,6 +373,10 @@ const InspectionSwipeCards = () => {
                     onFail={handleFail}
                     onPass={handlePass}
                     onQuickAction={handleQuickAction}
+                    stats={stats} // Pass stats to card
+                    viewMode={viewMode}
+                    setView={setView}
+                    hasResults={inspectionResults.length > 0}
                   />
                 )
               ) : (
@@ -416,6 +398,17 @@ const InspectionSwipeCards = () => {
               exit={{ opacity: 0, x: -20 }}
               transition={{ duration: 0.3 }}
             >
+              <div className="flex items-center p-2 bg-gray-800/80 rounded-lg mb-2">
+                <button
+                  onClick={() => setView("inspection")}
+                  className="p-1 hover:bg-gray-700 rounded-full transition-colors mr-2"
+                >
+                  <ChevronLeft className="w-5 h-5 text-gray-300" />
+                </button>
+                <h2 className="text-lg font-medium text-white">
+                  Inspection History
+                </h2>
+              </div>
               <InspectionResults
                 results={inspectionResults}
                 onSelectResult={(id) => setView("detail", id)}
@@ -434,6 +427,15 @@ const InspectionSwipeCards = () => {
               exit={{ opacity: 0, y: 20 }}
               transition={{ duration: 0.3 }}
             >
+              <div className="flex items-center p-2 bg-gray-800/80 rounded-lg mb-2">
+                <button
+                  onClick={() => setView("history")}
+                  className="p-1 hover:bg-gray-700 rounded-full transition-colors mr-2"
+                >
+                  <ChevronLeft className="w-5 h-5 text-gray-300" />
+                </button>
+                <h2 className="text-lg font-medium text-white">Item Details</h2>
+              </div>
               <InspectionResults
                 results={inspectionResults.filter(
                   (r) => r.id === selectedResultId
@@ -446,16 +448,6 @@ const InspectionSwipeCards = () => {
           )}
         </AnimatePresence>
       </motion.div>
-
-      {/* Swipe instructions - only show during active inspection, more compact */}
-      {viewMode === "inspection" && inspectionItems.length > 0 && (
-        <div className="w-full flex justify-between text-xs text-gray-400 px-2 py-1 bg-gray-800/50 rounded-lg mb-1">
-          <div className="text-red-400 font-medium">← Swipe LEFT to FAIL</div>
-          <div className="text-green-400 font-medium">
-            Swipe RIGHT to PASS →
-          </div>
-        </div>
-      )}
 
       {/* Modals */}
       <AnimatePresence>
