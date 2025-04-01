@@ -84,24 +84,9 @@ const HomePage = () => {
           <ClipboardCheck className="h-12 w-12 text-primary" />
         </motion.div>
 
-        <motion.h1
-          initial={{ y: 20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ duration: 0.5, delay: 0.1 }}
-          className="max-w-3xl bg-gradient-to-br from-white to-gray-300 bg-clip-text text-center text-3xl font-bold leading-tight text-transparent sm:text-5xl"
-        >
-          Store Quality Inspection
-        </motion.h1>
 
-        <motion.p
-          initial={{ y: 20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ duration: 0.5, delay: 0.2 }}
-          className="my-6 max-w-xl text-center text-base leading-relaxed text-gray-300 md:text-lg"
-        >
-          Maintain high standards and ensure quality compliance across all store
-          locations with our easy-to-use inspection tool.
-        </motion.p>
+
+
 
         {!showInspectionForm && !showStoreSelector ? (
           <motion.button
@@ -119,7 +104,7 @@ const HomePage = () => {
               scale: 0.95,
             }}
             onClick={handleStartInspection}
-            className="group relative flex w-fit items-center gap-1.5 rounded-full bg-primary px-6 py-3 text-primary-foreground font-medium transition-colors hover:bg-primary/90"
+            className="group relative flex w-fit items-center gap-1.5 rounded-full bg-primary px-6 py-3 mt-6 text-primary-foreground font-medium transition-colors hover:bg-primary/90"
           >
             Start Inspection
             <ChevronRight className="transition-transform group-hover:translate-x-1" />
