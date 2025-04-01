@@ -320,7 +320,7 @@ const InspectionSwipeCards = () => {
   };
 
   return (
-    <div className="flex flex-col items-center w-full max-w-md mx-auto min-h-screen bg-gradient-to-b from-gray-900 via-indigo-950 to-purple-950 p-1">
+    <div className="flex flex-col items-center w-full max-w-md mx-auto min-h-screen bg-gradient-to-b from-gray-900 via-indigo-950/90 to-purple-950/90 p-1">
       {/* Notification */}
       {notification && (
         <div
