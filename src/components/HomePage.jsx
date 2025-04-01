@@ -74,7 +74,7 @@ const HomePage = () => {
         <Lock className="h-4 w-4 text-primary-foreground" />
       </motion.button>
 
-      <div className="relative z-10 flex flex-col items-center justify-center min-h-[calc(100vh-12rem)]">
+      <div className="relative z-10 flex flex-col items-center justify-center ">
         <motion.div
           initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
