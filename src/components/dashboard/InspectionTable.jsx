@@ -4,13 +4,12 @@ import { getInspections } from "@/services/inspections/inspectionService";
 import {
   Eye,
   Trash2,
-  ChevronLeft,
-  ChevronRight,
   AlertCircle,
   CheckCircle,
   FileText,
   RefreshCw,
 } from "lucide-react";
+import Pagination from "./ui/Pagination";
 
 const InspectionTable = (props) => {
   // Destructure props with defaults for pagination
@@ -26,6 +25,7 @@ const InspectionTable = (props) => {
     itemsPerPage = 25,
     onPageChange = () => {},
     onTotalPagesChange = () => {},
+    setInspections: setParentInspections = () => {},
   } = props;
 
   // Component state
@@ -59,6 +59,9 @@ const InspectionTable = (props) => {
         setInspections(data);
         setTotalItems(total);
 
+        // Update parent state if needed
+        setParentInspections(data);
+
         // Calculate total pages and update parent component
         const totalPages = Math.ceil(total / itemsPerPage);
         onTotalPagesChange(totalPages);
@@ -86,6 +89,7 @@ const InspectionTable = (props) => {
     sortDirection,
     onTotalCountChange,
     onTotalPagesChange,
+    setParentInspections,
   ]);
 
   // Handle sort column click
@@ -332,6 +336,15 @@ const InspectionTable = (props) => {
           </tbody>
         </table>
       </div>
+
+      {/* Pagination */}
+      <Pagination
+        currentPage={currentPage}
+        totalPages={Math.ceil(totalItems / itemsPerPage)}
+        totalItems={totalItems}
+        onPageChange={onPageChange}
+        itemsPerPage={itemsPerPage}
+      />
     </div>
   );
 };
